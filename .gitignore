@@ -24,9 +24,6 @@ ts-debug.log*
 .env*.local
 .env
 
-# capacitor (mobile builds - not needed for web app)
-android/
+# capacitor mobile builds (keep ios and dist ignored, but allow android for Appflow)
 ios/
 dist/
-capacitor.config.ts
-MOBILE_GUIDE.md
