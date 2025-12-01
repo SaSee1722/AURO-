@@ -1,4 +1,4 @@
-package com.vybe.app;
+package com.auro.habittracker;
 
 import com.getcapacitor.BridgeActivity;
 

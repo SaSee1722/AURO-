@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "Vybe - Build Unbreakable Habits",
-  description: "Build unbreakable habits. One vibe at a time. Track streaks, see your progress, and stay motivated.",
+  title: "AURO+ - Build Unbreakable Habits",
+  description: "Build unbreakable habits with AURO+. Track streaks, see your progress, and stay motivated on your journey to excellence.",
   generator: "v0.app",
 }
 
