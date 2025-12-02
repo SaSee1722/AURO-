@@ -23,10 +23,10 @@ allprojects {
         mavenCentral()
     }
     
-    // Force Java 17 for all modules to fix "invalid source release: 21"
+    // Force Java 21 for all modules to fix "invalid source release: 21"
     tasks.withType(JavaCompile).configureEach {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 }
 
