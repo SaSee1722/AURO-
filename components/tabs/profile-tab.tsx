@@ -52,8 +52,18 @@ export function ProfileTab() {
   }
 
   useEffect(() => {
-    // Check if dark mode is enabled
-    setIsDark(document.documentElement.classList.contains("dark"))
+    // Load and apply dark mode preference
+    const darkModePref = localStorage.getItem("darkMode")
+    if (darkModePref === "true") {
+      document.documentElement.classList.add("dark")
+      setIsDark(true)
+    } else if (darkModePref === "false") {
+      document.documentElement.classList.remove("dark")
+      setIsDark(false)
+    } else {
+      // Default: check system preference
+      setIsDark(document.documentElement.classList.contains("dark"))
+    }
 
     // Load notification preference
     const notifPref = localStorage.getItem("notifications")
@@ -146,38 +156,57 @@ export function ProfileTab() {
   }
 
   const toggleDarkMode = () => {
-    document.documentElement.classList.toggle("dark")
-    setIsDark(!isDark)
+    const newDarkMode = !isDark
+
+    if (newDarkMode) {
+      document.documentElement.classList.add("dark")
+    } else {
+      document.documentElement.classList.remove("dark")
+    }
+
+    setIsDark(newDarkMode)
+    localStorage.setItem("darkMode", newDarkMode.toString())
   }
 
   const toggleNotifications = async () => {
     const newValue = !notificationsEnabled
 
     if (newValue) {
-      // Request notification permissions
-      const { notificationService } = await import('@/lib/notifications')
-      const granted = await notificationService.initialize()
+      try {
+        showToastMessage("Requesting notification permissions...")
 
-      if (granted) {
-        setNotificationsEnabled(true)
-        localStorage.setItem("notifications", "true")
+        // Request notification permissions
+        const { notificationService } = await import('@/lib/notifications')
+        console.log('🔔 Requesting permissions...')
+        const granted = await notificationService.initialize()
+        console.log('Permission granted:', granted)
 
-        // Schedule notifications for all habits
-        const { getHabits } = await import('@/lib/store')
-        const habits = getHabits()
-        await notificationService.scheduleHabitNotifications(habits)
+        if (granted) {
+          setNotificationsEnabled(true)
+          localStorage.setItem("notifications", "true")
 
-        // List pending notifications for debugging
-        await notificationService.listPendingNotifications()
+          // Schedule notifications for all habits
+          const { getHabits } = await import('@/lib/store')
+          const habits = getHabits()
+          console.log(`📅 Scheduling notifications for ${habits.length} habits...`)
+          await notificationService.scheduleHabitNotifications(habits)
 
-        showToastMessage(t("notificationsEnabled"))
-      } else {
-        showToastMessage("Notification permissions denied")
+          // List pending notifications for debugging
+          await notificationService.listPendingNotifications()
+
+          showToastMessage(t("notificationsEnabled") || "Notifications enabled!")
+        } else {
+          console.warn('❌ Permission denied')
+          showToastMessage("Please allow notifications in your device settings")
+        }
+      } catch (error) {
+        console.error('❌ Error enabling notifications:', error)
+        showToastMessage("Error enabling notifications. Check console for details.")
       }
     } else {
       setNotificationsEnabled(false)
       localStorage.setItem("notifications", "false")
-      showToastMessage(t("notificationsDisabled"))
+      showToastMessage(t("notificationsDisabled") || "Notifications disabled")
     }
   }
 

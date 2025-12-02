@@ -15,11 +15,21 @@ export class NotificationService {
     }
 
     async initialize(): Promise<boolean> {
-        if (this.initialized) return true
+        if (this.initialized) {
+            console.log('ℹ️ Notifications already initialized')
+            return true
+        }
 
         try {
+            console.log('🔔 Initializing notifications...')
+
+            // Check if we're on Capacitor (mobile) or web
+            const isCapacitor = !!(window as any).Capacitor
+            console.log(`Platform: ${isCapacitor ? 'Capacitor (Mobile)' : 'Web'}`)
+
             // Create notification channel for Android
-            if ((window as any).Capacitor?.getPlatform() === 'android') {
+            if (isCapacitor && (window as any).Capacitor?.getPlatform() === 'android') {
+                console.log('📱 Creating Android notification channel...')
                 await LocalNotifications.createChannel({
                     id: 'habit-reminders',
                     name: 'Habit Reminders',
@@ -32,15 +42,28 @@ export class NotificationService {
                 console.log('✅ Notification channel created')
             }
 
+            // Check current permissions first
+            console.log('🔍 Checking current permissions...')
+            const currentPermission = await LocalNotifications.checkPermissions()
+            console.log('Current permission status:', currentPermission)
+
+            if (currentPermission.display === 'granted') {
+                this.initialized = true
+                console.log('✅ Notification permissions already granted')
+                return true
+            }
+
             // Request permissions
+            console.log('📝 Requesting notification permissions...')
             const permission = await LocalNotifications.requestPermissions()
+            console.log('Permission result:', permission)
 
             if (permission.display === 'granted') {
                 this.initialized = true
                 console.log('✅ Notification permissions granted')
                 return true
             } else {
-                console.warn('⚠️ Notification permissions denied')
+                console.warn('⚠️ Notification permissions denied:', permission.display)
                 return false
             }
         } catch (error) {
