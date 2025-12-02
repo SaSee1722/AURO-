@@ -31,7 +31,7 @@ You need to add the mobile app redirect URL to your Supabase project:
 3. Go to **Authentication** → **URL Configuration**
 4. In **Redirect URLs**, add these URLs:
 
-   ```
+   ```text
    com.auro.habittracker://auth/callback
    https://your-domain.com/auth/callback
    http://localhost:3000/auth/callback

@@ -28,8 +28,53 @@ export default function VybeApp() {
   const [doItNowHabit, setDoItNowHabit] = useState<Habit | null>(null)
 
   useEffect(() => {
+    // Handle deep link for OAuth callback (Capacitor)
+    const handleDeepLink = async () => {
+      if (typeof window !== 'undefined' && (window as any).Capacitor) {
+        const { App } = await import('@capacitor/app')
+
+        App.addListener('appUrlOpen', async (data: any) => {
+          console.log('Deep link received:', data.url)
+
+          // Extract hash fragment from deep link
+          // Format: com.auro.habittracker://auth/callback#access_token=...&refresh_token=...
+          const url = data.url
+          const hashIndex = url.indexOf('#')
+
+          if (hashIndex !== -1) {
+            const hash = url.substring(hashIndex + 1)
+            const params = new URLSearchParams(hash)
+            const accessToken = params.get('access_token')
+            const refreshToken = params.get('refresh_token')
+
+            if (accessToken && refreshToken) {
+              console.log('Setting session from deep link')
+              try {
+                const { data: sessionData, error } = await supabase.auth.setSession({
+                  access_token: accessToken,
+                  refresh_token: refreshToken,
+                })
+
+                if (error) {
+                  console.error('Error setting session:', error)
+                } else {
+                  console.log('Session set successfully:', sessionData)
+                  setSession(sessionData.session)
+                }
+              } catch (error) {
+                console.error('Error in setSession:', error)
+              }
+            }
+          }
+        })
+      }
+    }
+
+    handleDeepLink()
+
     // Check active session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session)
       setSession(session)
       setAuthChecked(true)
     })
@@ -37,7 +82,11 @@ export default function VybeApp() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('Auth state changed:', _event, session)
       setSession(session)
+      if (!authChecked) {
+        setAuthChecked(true)
+      }
     })
 
     return () => subscription.unsubscribe()
