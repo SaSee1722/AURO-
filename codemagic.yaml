@@ -60,21 +60,21 @@ workflows:
           success: true
           failure: true
       
-      google_play:
-        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        track: $GOOGLE_PLAY_TRACK
-        submit_as_draft: true
+      # google_play:
+      #   credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+      #   track: $GOOGLE_PLAY_TRACK
+      #   submit_as_draft: true
 
   ios-workflow:
     name: iOS Build
     max_build_duration: 120
     instance_type: mac_mini_m1
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.auro.habittracker
-      groups:
-        - app_store_connect
+      # ios_signing:
+      #   distribution_type: app_store
+      #   bundle_identifier: com.auro.habittracker
+      # groups:
+      #   - app_store_connect
       vars:
         APP_STORE_APPLE_ID: 1234567890
       node: 18.17.0
@@ -128,9 +128,9 @@ workflows:
           success: true
           failure: true
       
-      app_store_connect:
-        auth: integration
-        submit_to_testflight: true
-        beta_groups:
-          - Internal Testers
-        submit_to_app_store: false
+      # app_store_connect:
+      #   auth: integration
+      #   submit_to_testflight: true
+      #   beta_groups:
+      #     - Internal Testers
+      #   submit_to_app_store: false
