@@ -13,6 +13,11 @@ workflows:
         GOOGLE_PLAY_TRACK: internal
       node: 20.11.0
     scripts:
+      - name: Set up Java 17
+        script: |
+          export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+          echo "JAVA_HOME set to $JAVA_HOME"
+      
       - name: Install npm dependencies
         script: |
           npm install
