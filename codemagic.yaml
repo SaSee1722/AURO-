@@ -4,8 +4,8 @@ workflows:
     max_build_duration: 120
     instance_type: mac_mini_m1
     environment:
-      android_signing:
-        - auro_keystore
+      # android_signing:
+      #   - auro_keystore
       groups:
         - google_play
       vars:
@@ -46,7 +46,8 @@ workflows:
       - name: Build Android app
         script: |
           cd android
-          ./gradlew assembleRelease
+          # Build Debug APK (doesn't require keystore upload)
+          ./gradlew assembleDebug
     
     artifacts:
       - android/app/build/outputs/**/*.apk
