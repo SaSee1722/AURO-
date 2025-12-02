@@ -11,7 +11,7 @@ workflows:
       vars:
         PACKAGE_NAME: "com.auro.habittracker"
         GOOGLE_PLAY_TRACK: internal
-      node: 18.17.0
+      node: 20.11.0
     scripts:
       - name: Install npm dependencies
         script: |
@@ -78,7 +78,7 @@ workflows:
       #   - app_store_connect
       vars:
         APP_STORE_APPLE_ID: 1234567890
-      node: 18.17.0
+      node: 20.11.0
       xcode: 15.0
       cocoapods: default
     scripts:
