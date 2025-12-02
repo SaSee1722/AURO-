@@ -11,10 +11,20 @@ export function LoginScreen() {
     const handleGoogleLogin = async () => {
         try {
             setIsLoading(true)
+
+            // Detect if running in Capacitor (mobile app)
+            const isCapacitor = typeof window !== 'undefined' &&
+                (window as any).Capacitor !== undefined
+
+            // Use custom scheme for mobile, standard URL for web
+            const redirectTo = isCapacitor
+                ? 'com.auro.habittracker://auth/callback'
+                : `${window.location.origin}/auth/callback`
+
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: "google",
                 options: {
-                    redirectTo: `${window.location.origin}/auth/callback`,
+                    redirectTo,
                 },
             })
             if (error) throw error
