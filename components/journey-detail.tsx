@@ -8,7 +8,7 @@ import { useTranslation } from "@/lib/use-translation"
 
 interface JourneyDetailProps {
     journey: {
-        id: number
+        id: number | string
         title: string
         days: string
         image: string
@@ -49,7 +49,7 @@ export function JourneyDetail({ journey, onBack }: JourneyDetailProps) {
     const timeline = journey.timeline || defaultTimeline
 
     return (
-        <div className="flex flex-col h-full bg-background animate-in fade-in slide-in-from-right-8 duration-500">
+        <div className="fixed inset-0 z-50 flex flex-col bg-background animate-in fade-in slide-in-from-bottom-8 duration-300">
             {/* Header Image */}
             <div className="relative h-[40vh] min-h-[300px]">
                 <div

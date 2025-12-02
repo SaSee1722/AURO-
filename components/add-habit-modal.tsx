@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,7 +18,17 @@ import {
   GlassWater,
   Footprints,
   ArrowRight,
-  ChevronLeft
+  ChevronLeft,
+  Move,
+  BookOpen,
+  Droplets,
+  PenTool,
+  Smartphone,
+  Target,
+  Brain,
+  Moon,
+  Utensils,
+  Sparkles
 } from "lucide-react"
 
 const EMOJI_OPTIONS = ["🧘", "💪", "📚", "💧", "✍️", "📵", "🏃", "🎯", "🧠", "😴", "🥗", "🎨"]
@@ -83,6 +93,13 @@ export function AddHabitModal({ open, onClose, onSave, initialData }: AddHabitMo
     setSelectedType("regular")
     setSelectedPresetId(null)
   }
+
+  // Reset form when modal opens (only if not editing)
+  useEffect(() => {
+    if (open && !initialData) {
+      resetForm()
+    }
+  }, [open, initialData])
 
   const handleClose = () => {
     resetForm()
@@ -158,6 +175,21 @@ export function AddHabitModal({ open, onClose, onSave, initialData }: AddHabitMo
 
   const currentSuggestions = selectedPresetId ? getSuggestions(selectedPresetId) : []
   const currentPreset = presets.find(p => p.id === selectedPresetId)
+
+  const ICON_OPTIONS = [
+    { emoji: "🧘", icon: Move },
+    { emoji: "💪", icon: CheckSquare }, // Using CheckSquare as placeholder for 'muscle' if not available, or just reuse what we have
+    { emoji: "📚", icon: BookOpen },
+    { emoji: "💧", icon: Droplets },
+    { emoji: "✍️", icon: PenTool },
+    { emoji: "📵", icon: Smartphone },
+    { emoji: "🏃", icon: Footprints }, // Running -> Footprints or Move
+    { emoji: "🎯", icon: Target },
+    { emoji: "🧠", icon: Brain },
+    { emoji: "😴", icon: Moon },
+    { emoji: "🥗", icon: Utensils }, // Salad -> Utensils
+    { emoji: "🎨", icon: Sparkles }, // Art -> Sparkles
+  ]
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -332,18 +364,20 @@ export function AddHabitModal({ open, onClose, onSave, initialData }: AddHabitMo
               </div>
 
               <div className="space-y-2">
-                <Label className="text-slate-700">{t("chooseEmoji")}</Label>
+                <Label className="text-slate-700">Choose an Icon</Label>
                 <div className="flex flex-wrap gap-2">
-                  {EMOJI_OPTIONS.map((e) => (
+                  {ICON_OPTIONS.map((option) => (
                     <button
-                      key={e}
-                      onClick={() => setEmoji(e)}
+                      key={option.emoji}
+                      onClick={() => setEmoji(option.emoji)}
                       className={cn(
-                        "flex h-12 w-12 items-center justify-center rounded-xl text-2xl transition-all",
-                        emoji === e ? "bg-[#005C4B]/10 ring-2 ring-[#005C4B]" : "bg-slate-100 hover:bg-slate-200",
+                        "flex h-12 w-12 items-center justify-center rounded-full transition-all border-2",
+                        emoji === option.emoji
+                          ? "bg-[#005C4B]/10 border-[#005C4B] text-[#005C4B]"
+                          : "bg-slate-50 border-transparent hover:bg-slate-100 text-slate-400",
                       )}
                     >
-                      {e}
+                      <option.icon className="h-6 w-6" />
                     </button>
                   ))}
                 </div>

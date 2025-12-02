@@ -41,7 +41,7 @@ These are now in your Android project and will be used when Appflow builds your 
 
 Your icon files are now at:
 
-```
+```text
 /Users/apple/Downloads/habit-tracker-design/
 ├── app-icon-1024.png                    ← Use this for Appflow dashboard
 ├── public/app-icon.png                  ← Web app icon
@@ -61,7 +61,7 @@ Your icon files are now at:
 
 Open Finder and navigate to:
 
-```
+```text
 /Users/apple/Downloads/habit-tracker-design/app-icon-1024.png
 ```
 

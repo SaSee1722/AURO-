@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Trash2 } from "lucide-react"
+import { Trash2, Droplets, Move, Target, Smartphone, Sun, Clock, Hammer, Rocket, Wind, Heart, Footprints, Brain, BookOpen, Trees, Utensils, PenTool, MessageCircle, Moon, Phone, Coffee, Sparkles } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
@@ -19,6 +19,33 @@ interface HabitCardProps {
   onToggle: () => void
   onDelete?: () => void
   onClick?: () => void
+}
+
+// Helper to map emoji back to icon
+const getIconForEmoji = (emoji: string) => {
+  switch (emoji) {
+    case "💧": return Droplets
+    case "🧘": return Move
+    case "🎯": return Target
+    case "📵": return Smartphone
+    case "☀️": return Sun
+    case "⏱️": return Clock
+    case "🔨": return Hammer
+    case "🚀": return Rocket
+    case "🌬️": return Wind
+    case "🙏": return Heart
+    case "🦶": return Footprints
+    case "🧠": return Brain
+    case "📖": return BookOpen
+    case "🌳": return Trees
+    case "😋": return Utensils
+    case "✍️": return PenTool
+    case "🤔": return MessageCircle
+    case "😴": return Moon
+    case "📞": return Phone
+    case "☕": return Coffee
+    default: return Sparkles
+  }
 }
 
 export function HabitCard({ habit, isCompleted, streak, onToggle, onDelete, onClick }: HabitCardProps) {
@@ -43,6 +70,8 @@ export function HabitCard({ habit, isCompleted, streak, onToggle, onDelete, onCl
     onDelete?.()
   }
 
+  const IconComponent = getIconForEmoji(habit.emoji)
+
   return (
     <Card
       className={cn(
@@ -56,14 +85,13 @@ export function HabitCard({ habit, isCompleted, streak, onToggle, onDelete, onCl
         <button
           onClick={handleToggle}
           className={cn(
-            "flex h-12 w-12 items-center justify-center rounded-2xl text-2xl transition-all duration-300",
-            isCompleted ? "bg-success/20 scale-105" : "bg-secondary hover:bg-secondary/80",
+            "flex h-12 w-12 items-center justify-center rounded-full border-2 transition-all duration-300",
+            isCompleted
+              ? "bg-success/10 border-success text-success scale-105"
+              : "bg-transparent border-primary/50 text-primary hover:border-primary hover:bg-primary/5",
           )}
-          style={{
-            borderLeft: `4px solid ${habit.color}`,
-          }}
         >
-          {habit.emoji}
+          <IconComponent className="h-6 w-6" />
         </button>
 
         <div className="flex-1 cursor-pointer" onClick={onClick}>

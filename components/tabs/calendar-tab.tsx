@@ -117,18 +117,6 @@ export function CalendarTab() {
             <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full translate-y-1.5" />
           )}
         </button>
-        <button
-          onClick={() => setActiveTab("achievements")}
-          className={cn(
-            "text-base font-semibold pb-2 transition-all relative",
-            activeTab === "achievements" ? "text-foreground" : "text-muted-foreground"
-          )}
-        >
-          {t("achievements")}
-          {activeTab === "achievements" && (
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full translate-y-1.5" />
-          )}
-        </button>
       </div>
 
       {/* --- CALENDAR TAB CONTENT --- */}
@@ -181,39 +169,104 @@ export function CalendarTab() {
             <p className="text-sm font-bold text-muted-foreground mb-4 capitalize">{monthName}</p>
 
             <Card className="glass border-0 p-5 shadow-lg">
-              <div className="flex justify-between items-start mb-8">
-                <div>
-                  <h3 className="text-lg font-bold text-foreground">Nov 23 - Nov 29</h3>
-                  <p className="text-sm text-muted-foreground">2025</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-2xl font-bold text-foreground">33%</span>
-                  <p className="text-xs text-muted-foreground">{t("avgCompletionRate")}</p>
-                </div>
-              </div>
+              {(() => {
+                // Calculate weekly stats based on selectedDate
+                // Fix: Parse YYYY-MM-DD string explicitly to avoid timezone issues
+                const [y, m, d] = (selectedDate || formatDate(new Date())).split('-').map(Number)
+                const selected = new Date(y, m - 1, d)
 
-              {/* Mock Bar Chart */}
-              <div className="h-32 flex items-end justify-between gap-2 relative">
-                {/* Dotted Line */}
-                <div className="absolute top-1/2 left-0 right-0 border-t border-dashed border-muted-foreground/20" />
+                const dayOfWeek = selected.getDay() // 0 (Sun) to 6 (Sat)
+                const startOfWeek = new Date(selected)
+                startOfWeek.setDate(selected.getDate() - dayOfWeek) // Go back to Sunday
 
-                {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => {
-                  const height = [20, 30, 25, 35, 60, 20, 25][i] // Mock data
-                  const isHigh = height > 50
-                  return (
-                    <div key={i} className="flex flex-col items-center gap-2 flex-1">
-                      <div
-                        className={cn(
-                          "w-3 rounded-full transition-all duration-500",
-                          isHigh ? "bg-primary shadow-lg" : "bg-secondary"
-                        )}
-                        style={{ height: `${height}%` }}
-                      />
-                      <span className="text-xs font-medium text-muted-foreground">{day}</span>
+                const weekData = []
+                let totalRate = 0
+
+                for (let i = 0; i < 7; i++) {
+                  const current = new Date(startOfWeek)
+                  current.setDate(startOfWeek.getDate() + i)
+                  const dateStr = formatDate(current)
+                  const currentDayOfWeek = current.getDay()
+
+                  // Find habits scheduled for this day
+                  const scheduledHabits = activeHabits.filter(h => h.repeatDays.includes(currentDayOfWeek))
+
+                  // Find completions for this day matching scheduled habits
+                  const completedCount = completions.filter(c =>
+                    c.date === dateStr && scheduledHabits.some(h => h.id === c.habitId)
+                  ).length
+
+                  const rate = scheduledHabits.length > 0 ? (completedCount / scheduledHabits.length) * 100 : 0
+                  weekData.push({
+                    day: current.toLocaleDateString(currentLocale, { weekday: "narrow" }),
+                    rate,
+                    isHigh: rate >= 80, // Green if >= 80%
+                    isMedium: rate >= 40 && rate < 80, // Orange if 40-79%
+                    date: current
+                  })
+                  totalRate += rate
+                }
+
+                const avgRate = Math.round(totalRate / 7)
+                const endOfWeek = new Date(startOfWeek)
+                endOfWeek.setDate(startOfWeek.getDate() + 6)
+
+                const dateRange = `${startOfWeek.toLocaleDateString(currentLocale, { month: "short", day: "numeric" })} - ${endOfWeek.toLocaleDateString(currentLocale, { month: "short", day: "numeric" })}`
+
+                return (
+                  <>
+                    <div className="flex justify-between items-start mb-8">
+                      <div>
+                        <h3 className="text-lg font-bold text-foreground">{dateRange}</h3>
+                        <p className="text-sm text-muted-foreground">{startOfWeek.getFullYear()}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-2xl font-bold text-foreground">{avgRate}%</span>
+                        <p className="text-xs text-muted-foreground">{t("avgCompletionRate")}</p>
+                      </div>
                     </div>
-                  )
-                })}
-              </div>
+
+                    {/* Bar Chart */}
+                    <div className="h-32 flex items-end justify-between gap-2 relative">
+                      {/* Dotted Line (50%) */}
+                      <div className="absolute top-1/2 left-0 right-0 border-t border-dashed border-muted-foreground/20" />
+
+                      {weekData.map((data, i) => (
+                        <div key={i} className="flex flex-col items-center gap-2 flex-1 group relative">
+                          {/* Tooltip */}
+                          <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-opacity bg-foreground text-background text-[10px] px-2 py-1 rounded z-10">
+                            {Math.round(data.rate)}%
+                          </div>
+
+                          {/* Bar Container */}
+                          <div className="relative w-full h-full flex items-end justify-center">
+                            {/* Background bar (always visible) */}
+                            <div className="absolute bottom-0 w-4 h-full bg-secondary/30 rounded-full" />
+
+                            {/* Actual completion bar */}
+                            <div
+                              className={cn(
+                                "w-4 rounded-full transition-all duration-500 relative z-10",
+                                data.rate >= 80 ? "bg-green-500 shadow-lg shadow-green-500/20" :
+                                  data.rate >= 40 ? "bg-orange-500 shadow-lg shadow-orange-500/20" :
+                                    data.rate > 0 ? "bg-red-400 shadow-lg shadow-red-400/20" : "bg-transparent"
+                              )}
+                              style={{ height: `${data.rate}%` }}
+                            />
+                          </div>
+
+                          <span className={cn(
+                            "text-xs font-medium",
+                            formatDate(data.date) === selectedDate ? "text-primary font-bold" : "text-muted-foreground"
+                          )}>
+                            {data.day}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )
+              })()}
             </Card>
           </div>
         </div>
@@ -272,62 +325,6 @@ export function CalendarTab() {
               </div>
             </div>
           )}
-        </div>
-      )}
-
-      {/* --- ACHIEVEMENTS TAB CONTENT --- */}
-      {activeTab === "achievements" && (
-        <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-          {/* Main Banner */}
-          <Card className="border-0 p-6 bg-blue-500 text-white shadow-lg relative overflow-hidden">
-            <div className="relative z-10">
-              <h2 className="text-xl font-bold mb-1">{t("myAchievements")}</h2>
-              <p className="text-sm text-white/80">{t("earnedAchievements")}</p>
-            </div>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full border-4 border-white/30 flex items-center justify-center font-bold text-xl">
-              1
-            </div>
-          </Card>
-
-          {/* Habits Finished Grid */}
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-foreground">{t("habitsFinished")}</h3>
-              <span className="text-sm text-muted-foreground">1/6 {t("archived")}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              {[1, 10, 20, 50, 100, 300].map((count, i) => (
-                <div key={count} className="flex flex-col items-center text-center">
-                  <div className={cn(
-                    "h-16 w-16 mb-2 flex items-center justify-center rounded-full border-4",
-                    i === 0 ? "bg-blue-500/20 border-blue-500 text-blue-500" : "bg-muted border-muted-foreground/30 text-muted-foreground/50"
-                  )}>
-                    <Target className="h-8 w-8" />
-                  </div>
-                  <span className="text-xs font-bold text-foreground mb-0.5">{t("finishHabit")}</span>
-                  <span className="text-xs font-bold text-foreground">{i === 0 ? t("firstTime") : `${count} ${t("times")}`}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Perfect Days Grid */}
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-foreground">{t("perfectDays")}</h3>
-              <span className="text-sm text-muted-foreground">0/6 {t("archived")}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              {[3, 10, 20, 50, 100, 300].map((count) => (
-                <div key={count} className="flex flex-col items-center text-center">
-                  <div className="h-16 w-16 mb-2 flex items-center justify-center rounded-full bg-muted border-4 border-muted-foreground/30 text-muted-foreground/50">
-                    <CalendarIcon className="h-8 w-8" />
-                  </div>
-                  <span className="text-xs font-bold text-foreground">{count} {t("perfect")}</span>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 import type { Habit, HabitCompletion } from "./types"
 import { formatDate } from "./data"
 import { supabase } from "./supabase"
+import { notificationService } from "./notifications"
 
 const HABITS_KEY = "vybe_habits"
 const COMPLETIONS_KEY = "vybe_completions"
@@ -15,6 +16,11 @@ export function getHabits(): Habit[] {
 export function saveHabits(habits: Habit[]): void {
   if (typeof window === "undefined") return
   localStorage.setItem(HABITS_KEY, JSON.stringify(habits))
+
+  // Schedule notifications for all habits
+  notificationService.scheduleHabitNotifications(habits).catch(err => {
+    console.error("Failed to schedule notifications:", err)
+  })
 }
 
 export async function syncWithSupabase(userId: string) {
@@ -183,6 +189,11 @@ export function archiveHabit(habitId: string): void {
 }
 
 export function deleteHabit(habitId: string): void {
+  // Cancel notifications for this habit
+  notificationService.cancelHabitNotifications(habitId).catch(err => {
+    console.error("Failed to cancel notifications:", err)
+  })
+
   const habits = getHabits().filter((h) => h.id !== habitId)
   saveHabits(habits)
 
@@ -191,6 +202,19 @@ export function deleteHabit(habitId: string): void {
     if (user) {
       supabase.from('habits').delete().eq('id', habitId).then(({ error }) => {
         if (error) console.error("Supabase delete failed:", error)
+      })
+    }
+  })
+}
+
+export function deleteAllHabits(): void {
+  saveHabits([])
+
+  // Sync to Supabase
+  supabase.auth.getUser().then(({ data: { user } }) => {
+    if (user) {
+      supabase.from('habits').delete().eq('user_id', user.id).then(({ error }) => {
+        if (error) console.error("Supabase delete all failed:", error)
       })
     }
   })

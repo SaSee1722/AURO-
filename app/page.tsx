@@ -8,24 +8,52 @@ import { VybesTab } from "@/components/tabs/vybes-tab"
 import { ProfileTab } from "@/components/tabs/profile-tab"
 import { Onboarding } from "@/components/onboarding"
 import { DoItNowScreen } from "@/components/do-it-now-screen"
+import { SplashScreen } from "@/components/splash-screen"
+import { LoginScreen } from "@/components/login-screen"
 import { isOnboardingComplete, getHabits, getStreak, toggleCompletion } from "@/lib/store"
 import { formatDate } from "@/lib/data"
+import { supabase } from "@/lib/supabase"
 import type { Habit } from "@/lib/types"
+import type { Session } from "@supabase/supabase-js"
 
 type TabType = "home" | "calendar" | "vybes" | "profile"
 
 export default function VybeApp() {
-  const [showOnboarding, setShowOnboarding] = useState(true)
+  const [showSplash, setShowSplash] = useState(true)
+  const [session, setSession] = useState<Session | null>(null)
+  const [authChecked, setAuthChecked] = useState(false)
+
+  const [showOnboarding, setShowOnboarding] = useState(false)
   const [activeTab, setActiveTab] = useState<TabType>("home")
-  const [isLoading, setIsLoading] = useState(true)
   const [doItNowHabit, setDoItNowHabit] = useState<Habit | null>(null)
 
   useEffect(() => {
-    // Check onboarding status
-    const onboardingComplete = isOnboardingComplete()
-    setShowOnboarding(!onboardingComplete)
-    setIsLoading(false)
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+      setAuthChecked(true)
+    })
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
+
+  useEffect(() => {
+    if (authChecked && !showSplash && session) {
+      // Check onboarding status only after auth is confirmed and splash is done
+      const onboardingComplete = isOnboardingComplete()
+      setShowOnboarding(!onboardingComplete)
+    }
+  }, [authChecked, showSplash, session])
+
+  const handleSplashFinish = () => {
+    setShowSplash(false)
+  }
 
   const handleDoItNowComplete = () => {
     if (doItNowHabit) {
@@ -39,20 +67,16 @@ export default function VybeApp() {
     setDoItNowHabit(null)
   }
 
-  // Demo: Show Do It Now screen when clicking a habit (simulating notification)
-  const handleDemoDoItNow = () => {
-    const habits = getHabits().filter((h) => !h.archived)
-    if (habits.length > 0) {
-      setDoItNowHabit(habits[0])
-    }
+  if (showSplash) {
+    return <SplashScreen onFinish={handleSplashFinish} />
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="text-4xl animate-pulse">🌊</div>
-      </div>
-    )
+  if (!authChecked) {
+    return null // Or a loading spinner, but splash covers this usually
+  }
+
+  if (!session) {
+    return <LoginScreen />
   }
 
   if (showOnboarding) {
