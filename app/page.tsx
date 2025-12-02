@@ -11,10 +11,12 @@ import { DoItNowScreen } from "@/components/do-it-now-screen"
 import { SplashScreen } from "@/components/splash-screen"
 import { LoginScreen } from "@/components/login-screen"
 import { isOnboardingComplete, getHabits, getStreak, toggleCompletion } from "@/lib/store"
-import { formatDate } from "@/lib/data"
+import { formatDate, getTodayQuote } from "@/lib/data"
 import { supabase } from "@/lib/supabase"
+import { notificationService } from "@/lib/notifications"
 import type { Habit } from "@/lib/types"
 import type { Session } from "@supabase/supabase-js"
+import { NotificationSplash } from "@/components/notification-splash"
 
 type TabType = "home" | "calendar" | "vybes" | "profile"
 
@@ -26,6 +28,7 @@ export default function VybeApp() {
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [activeTab, setActiveTab] = useState<TabType>("home")
   const [doItNowHabit, setDoItNowHabit] = useState<Habit | null>(null)
+  const [notificationHabit, setNotificationHabit] = useState<{ habit: Habit; quote: string } | null>(null)
 
   useEffect(() => {
     // Handle deep link for OAuth callback (Capacitor)
@@ -89,6 +92,23 @@ export default function VybeApp() {
       }
     })
 
+    // Setup notification listeners
+    notificationService.setupNotificationListeners((habitId, habitData) => {
+      console.log('Notification received for habit:', habitId, habitData)
+
+      // Find the full habit data
+      const habits = getHabits()
+      const habit = habits.find(h => h.id === habitId)
+
+      if (habit) {
+        // Get a motivational quote
+        const quoteObj = getTodayQuote()
+
+        // Show notification splash
+        setNotificationHabit({ habit, quote: quoteObj.text })
+      }
+    })
+
     return () => subscription.unsubscribe()
   }, [])
 
@@ -142,6 +162,19 @@ export default function VybeApp() {
           onComplete={handleDoItNowComplete}
           onSnooze={handleDoItNowSnooze}
           onClose={() => setDoItNowHabit(null)}
+        />
+      )}
+
+      {/* Notification Splash Screen */}
+      {notificationHabit && (
+        <NotificationSplash
+          habit={notificationHabit.habit}
+          quote={notificationHabit.quote}
+          onDismiss={() => setNotificationHabit(null)}
+          onDoItNow={() => {
+            setDoItNowHabit(notificationHabit.habit)
+            setNotificationHabit(null)
+          }}
         />
       )}
 

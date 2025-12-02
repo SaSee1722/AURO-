@@ -18,6 +18,20 @@ export class NotificationService {
         if (this.initialized) return true
 
         try {
+            // Create notification channel for Android
+            if ((window as any).Capacitor?.getPlatform() === 'android') {
+                await LocalNotifications.createChannel({
+                    id: 'habit-reminders',
+                    name: 'Habit Reminders',
+                    description: 'Notifications for your daily habits',
+                    importance: 5, // Max importance for sound and heads-up
+                    sound: 'default',
+                    vibration: true,
+                    visibility: 1, // Public
+                })
+                console.log('✅ Notification channel created')
+            }
+
             // Request permissions
             const permission = await LocalNotifications.requestPermissions()
 
@@ -33,6 +47,24 @@ export class NotificationService {
             console.error('❌ Error initializing notifications:', error)
             return false
         }
+    }
+
+    setupNotificationListeners(onNotificationReceived: (habitId: string, habitData: any) => void): void {
+        // Listen for notification actions (when user taps notification)
+        LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
+            console.log('📱 Notification tapped:', notification)
+            const { habitId, habitName, habitEmoji, habitColor } = notification.notification.extra || {}
+
+            if (habitId) {
+                onNotificationReceived(habitId, {
+                    name: habitName,
+                    emoji: habitEmoji,
+                    color: habitColor,
+                })
+            }
+        })
+
+        console.log('✅ Notification listeners registered')
     }
 
     async scheduleHabitNotifications(habits: Habit[]): Promise<void> {
@@ -85,21 +117,24 @@ export class NotificationService {
 
             notifications.push({
                 id: notificationId,
-                title: `⏰ ${habit.name}`,
-                body: `Time to complete your habit!`,
+                title: `${habit.emoji} ${habit.name}`,
+                body: `Time to build your habit! Tap to get started.`,
                 schedule: {
                     at: scheduledDate,
                     allowWhileIdle: true,
                     repeats: true,
                     every: 'week' as const,
                 },
-                sound: undefined,
+                sound: 'default',
                 attachments: undefined,
-                actionTypeId: '',
+                actionTypeId: 'HABIT_REMINDER',
                 extra: {
                     habitId: habit.id,
                     habitName: habit.name,
+                    habitEmoji: habit.emoji,
+                    habitColor: habit.color,
                 },
+                channelId: 'habit-reminders',
             })
         }
 
