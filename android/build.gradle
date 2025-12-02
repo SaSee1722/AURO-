@@ -27,6 +27,11 @@ allprojects {
     tasks.withType(JavaCompile).configureEach {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        
+        // Configure Toolchain to ensure the correct compiler is used
+        javaCompiler = javaToolchains.compilerFor {
+            languageVersion = JavaLanguageVersion.of(17)
+        }
     }
 }
 
