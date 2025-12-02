@@ -1,0 +1,136 @@
+workflows:
+  android-workflow:
+    name: Android Build
+    max_build_duration: 120
+    instance_type: mac_mini_m1
+    environment:
+      android_signing:
+        - auro_keystore
+      groups:
+        - google_play
+      vars:
+        PACKAGE_NAME: "com.auro.habittracker"
+        GOOGLE_PLAY_TRACK: internal
+      node: 18.17.0
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          npm install
+      
+      - name: Set up environment variables
+        script: |
+          echo "NEXT_PUBLIC_SUPABASE_URL=$SUPABASE_URL" >> .env.local
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> .env.local
+      
+      - name: Build Next.js app
+        script: |
+          npm run build
+      
+      - name: Update Android version
+        script: |
+          # Increment version code
+          cd android
+          CURRENT_VERSION=$(grep -oP 'versionCode \K\d+' app/build.gradle)
+          NEW_VERSION=$((CURRENT_VERSION + 1))
+          sed -i "s/versionCode $CURRENT_VERSION/versionCode $NEW_VERSION/" app/build.gradle
+          
+          # Update version name
+          VERSION_NAME="1.0.$NEW_VERSION"
+          sed -i "s/versionName \".*\"/versionName \"$VERSION_NAME\"/" app/build.gradle
+          cd ..
+      
+      - name: Sync Capacitor
+        script: |
+          npx cap sync android
+      
+      - name: Build Android app
+        script: |
+          cd android
+          ./gradlew assembleRelease
+    
+    artifacts:
+      - android/app/build/outputs/**/*.apk
+      - android/app/build/outputs/**/*.aab
+    
+    publishing:
+      email:
+        recipients:
+          - your-email@example.com
+        notify:
+          success: true
+          failure: true
+      
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: $GOOGLE_PLAY_TRACK
+        submit_as_draft: true
+
+  ios-workflow:
+    name: iOS Build
+    max_build_duration: 120
+    instance_type: mac_mini_m1
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.auro.habittracker
+      groups:
+        - app_store_connect
+      vars:
+        APP_STORE_APPLE_ID: 1234567890
+      node: 18.17.0
+      xcode: 15.0
+      cocoapods: default
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          npm install
+      
+      - name: Set up environment variables
+        script: |
+          echo "NEXT_PUBLIC_SUPABASE_URL=$SUPABASE_URL" >> .env.local
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> .env.local
+      
+      - name: Build Next.js app
+        script: |
+          npm run build
+      
+      - name: Sync Capacitor
+        script: |
+          npx cap sync ios
+      
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios/App
+          pod install
+      
+      - name: Build iOS app
+        script: |
+          cd ios/App
+          xcodebuild -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath $CM_BUILD_DIR/App.xcarchive \
+            archive
+          
+          xcodebuild -exportArchive \
+            -archivePath $CM_BUILD_DIR/App.xcarchive \
+            -exportPath $CM_BUILD_DIR \
+            -exportOptionsPlist $CM_EXPORT_OPTIONS
+    
+    artifacts:
+      - $CM_BUILD_DIR/*.ipa
+    
+    publishing:
+      email:
+        recipients:
+          - your-email@example.com
+        notify:
+          success: true
+          failure: true
+      
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        beta_groups:
+          - Internal Testers
+        submit_to_app_store: false
