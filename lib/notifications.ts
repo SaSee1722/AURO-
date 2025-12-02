@@ -64,6 +64,20 @@ export class NotificationService {
             }
         })
 
+        // Listen for notifications being received (to reschedule them)
+        LocalNotifications.addListener('localNotificationReceived', async (notification) => {
+            console.log('🔔 Notification received:', notification)
+
+            // Reschedule this notification for next week
+            const { habitId } = notification.extra || {}
+            if (habitId) {
+                // Get the habit and reschedule
+                const { getHabits } = await import('./store')
+                const habits = getHabits()
+                await this.scheduleHabitNotifications(habits)
+            }
+        })
+
         console.log('✅ Notification listeners registered')
     }
 
@@ -110,10 +124,25 @@ export class NotificationService {
             // Adjust to the next occurrence of this day of week
             const currentDay = now.getDay()
             let daysUntilNext = dayOfWeek - currentDay
-            if (daysUntilNext < 0 || (daysUntilNext === 0 && now > scheduledDate)) {
+
+            // If it's today but the time has passed, schedule for next week
+            // If it's today and time hasn't passed, schedule for today (daysUntilNext = 0)
+            if (daysUntilNext < 0) {
                 daysUntilNext += 7
+            } else if (daysUntilNext === 0 && now >= scheduledDate) {
+                // Time has passed today, schedule for next week
+                daysUntilNext = 7
             }
+
             scheduledDate.setDate(now.getDate() + daysUntilNext)
+
+            console.log(`📅 Scheduling notification for ${habit.name}:`, {
+                day: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayOfWeek],
+                time: habit.reminderTime,
+                scheduledFor: scheduledDate.toLocaleString(),
+                daysUntilNext,
+                notificationId
+            })
 
             notifications.push({
                 id: notificationId,
@@ -122,8 +151,6 @@ export class NotificationService {
                 schedule: {
                     at: scheduledDate,
                     allowWhileIdle: true,
-                    repeats: true,
-                    every: 'week' as const,
                 },
                 sound: 'default',
                 attachments: undefined,
@@ -187,6 +214,18 @@ export class NotificationService {
         } catch (error) {
             console.error('Error checking permissions:', error)
             return false
+        }
+    }
+
+    async listPendingNotifications(): Promise<void> {
+        try {
+            const pending = await LocalNotifications.getPending()
+            console.log(`📋 Pending notifications (${pending.notifications.length}):`)
+            pending.notifications.forEach(n => {
+                console.log(`  - ID: ${n.id}, Title: ${n.title}, Scheduled: ${n.schedule?.at}`)
+            })
+        } catch (error) {
+            console.error('Error listing pending notifications:', error)
         }
     }
 }

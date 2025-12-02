@@ -167,6 +167,9 @@ export function ProfileTab() {
         const habits = getHabits()
         await notificationService.scheduleHabitNotifications(habits)
 
+        // List pending notifications for debugging
+        await notificationService.listPendingNotifications()
+
         showToastMessage(t("notificationsEnabled"))
       } else {
         showToastMessage("Notification permissions denied")

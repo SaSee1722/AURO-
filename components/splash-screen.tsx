@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
+import Image from "next/image"
 
 export function SplashScreen({ onFinish }: { onFinish: () => void }) {
     const [isVisible, setIsVisible] = useState(true)
@@ -21,7 +22,7 @@ export function SplashScreen({ onFinish }: { onFinish: () => void }) {
         <motion.div
             initial={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background"
+            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-gradient-to-br from-primary/10 via-background to-primary/5"
         >
             <motion.div
                 initial={{ scale: 0.5, opacity: 0 }}
@@ -29,7 +30,29 @@ export function SplashScreen({ onFinish }: { onFinish: () => void }) {
                 transition={{ duration: 0.5, ease: "easeOut" }}
                 className="flex flex-col items-center"
             >
-                <div className="text-6xl mb-4">🌊</div>
+                {/* App Icon */}
+                <motion.div
+                    animate={{
+                        scale: [1, 1.05, 1],
+                    }}
+                    transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                    }}
+                    className="mb-6 rounded-3xl overflow-hidden shadow-2xl"
+                >
+                    <Image
+                        src="/app-icon.png"
+                        alt="AURO+"
+                        width={120}
+                        height={120}
+                        className="rounded-3xl"
+                        priority
+                    />
+                </motion.div>
+
+                {/* App Name */}
                 <h1 className="text-4xl font-bold tracking-tighter text-foreground">
                     AURO<span className="text-primary">+</span>
                 </h1>
