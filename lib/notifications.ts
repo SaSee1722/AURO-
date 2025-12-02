@@ -87,20 +87,6 @@ export class NotificationService {
             }
         })
 
-        // Listen for notifications being received (to reschedule them)
-        LocalNotifications.addListener('localNotificationReceived', async (notification) => {
-            console.log('🔔 Notification received:', notification)
-
-            // Reschedule this notification for next week
-            const { habitId } = notification.extra || {}
-            if (habitId) {
-                // Get the habit and reschedule
-                const { getHabits } = await import('./store')
-                const habits = getHabits()
-                await this.scheduleHabitNotifications(habits)
-            }
-        })
-
         console.log('✅ Notification listeners registered')
     }
 
@@ -174,6 +160,7 @@ export class NotificationService {
                 schedule: {
                     at: scheduledDate,
                     allowWhileIdle: true,
+                    every: 'week' as any, // Native weekly repetition
                 },
                 sound: 'default',
                 attachments: undefined,

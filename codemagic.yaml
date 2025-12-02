@@ -44,13 +44,15 @@ workflows:
         script: |
           # Increment version code
           cd android
-          CURRENT_VERSION=$(grep -oP 'versionCode \K\d+' app/build.gradle)
+          # Use sed to extract version code (macOS compatible)
+          CURRENT_VERSION=$(sed -n 's/.*versionCode \([0-9]*\).*/\1/p' app/build.gradle)
           NEW_VERSION=$((CURRENT_VERSION + 1))
-          sed -i "s/versionCode $CURRENT_VERSION/versionCode $NEW_VERSION/" app/build.gradle
+          # Use sed -i '' for macOS
+          sed -i '' "s/versionCode $CURRENT_VERSION/versionCode $NEW_VERSION/" app/build.gradle
           
           # Update version name
           VERSION_NAME="1.0.$NEW_VERSION"
-          sed -i "s/versionName \".*\"/versionName \"$VERSION_NAME\"/" app/build.gradle
+          sed -i '' "s/versionName \".*\"/versionName \"$VERSION_NAME\"/" app/build.gradle
           cd ..
       
       - name: Sync Capacitor
@@ -60,6 +62,8 @@ workflows:
       - name: Build Android app
         script: |
           cd android
+          # Ensure gradlew is executable
+          chmod +x gradlew
           # Build Debug APK (doesn't require keystore upload)
           ./gradlew assembleDebug
     
