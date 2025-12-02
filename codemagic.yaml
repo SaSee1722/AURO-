@@ -15,8 +15,13 @@ workflows:
     scripts:
       - name: Set up Java 21
         script: |
-          export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+          brew install openjdk@21
+          export JAVA_HOME="/opt/homebrew/opt/openjdk@21"
           echo "JAVA_HOME set to $JAVA_HOME"
+          
+          # Add to PATH for subsequent steps (Codemagic specific)
+          echo "JAVA_HOME=$JAVA_HOME" >> $CM_ENV
+          echo "PATH=$JAVA_HOME/bin:$PATH" >> $CM_ENV
       
       - name: Install npm dependencies
         script: |
