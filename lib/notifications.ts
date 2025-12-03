@@ -1,4 +1,6 @@
 import { LocalNotifications } from '@capacitor/local-notifications'
+import { PushNotifications } from '@capacitor/push-notifications'
+import { supabase } from './supabase'
 import type { Habit } from './types'
 
 export class NotificationService {
@@ -69,6 +71,65 @@ export class NotificationService {
         } catch (error) {
             console.error('❌ Error initializing notifications:', error)
             return false
+        }
+    }
+
+    async registerPushNotifications(userId: string) {
+        const isCapacitor = !!(window as any).Capacitor
+        if (!isCapacitor) {
+            console.log('Web platform: Push notifications not fully supported yet')
+            return
+        }
+
+        try {
+            console.log('🚀 Registering for Push Notifications...')
+
+            // Request permission
+            const permStatus = await PushNotifications.requestPermissions()
+            if (permStatus.receive === 'granted') {
+                // Register with Apple / Google to receive push via APNS/FCM
+                await PushNotifications.register()
+            } else {
+                console.warn('Push notification permission denied')
+            }
+
+            // Listen for registration success
+            PushNotifications.addListener('registration', async (token) => {
+                console.log('📲 Push registration success, token:', token.value)
+
+                // Save token to Supabase
+                const { error } = await supabase.from('user_devices').upsert({
+                    user_id: userId,
+                    token: token.value,
+                    platform: (window as any).Capacitor.getPlatform(),
+                    last_active: new Date().toISOString()
+                }, { onConflict: 'token' })
+
+                if (error) {
+                    console.error('❌ Failed to save push token to Supabase:', error)
+                } else {
+                    console.log('✅ Push token saved to Supabase')
+                }
+            })
+
+            // Listen for registration errors
+            PushNotifications.addListener('registrationError', (error) => {
+                console.error('❌ Push registration failed:', error)
+            })
+
+            // Listen for received notifications
+            PushNotifications.addListener('pushNotificationReceived', (notification) => {
+                console.log('🔔 Push notification received:', notification)
+            })
+
+            // Listen for notification actions
+            PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+                console.log('👉 Push notification tapped:', notification)
+                // Handle navigation if needed
+            })
+
+        } catch (error) {
+            console.error('Error registering push notifications:', error)
         }
     }
 

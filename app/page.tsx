@@ -87,6 +87,9 @@ export default function VybeApp() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       console.log('Auth state changed:', _event, session)
       setSession(session)
+      if (session?.user) {
+        notificationService.registerPushNotifications(session.user.id)
+      }
       if (!authChecked) {
         setAuthChecked(true)
       }
