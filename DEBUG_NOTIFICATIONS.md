@@ -20,15 +20,27 @@ If notifications are not working, please follow these steps to identify the issu
    - `📲 Sending notification to user...`
    - `❌ Error...`
 
-## 3. Check Cron Job
+## 3. Check Cron Job Status
 
-1. The function should run every minute.
-2. If you don't see logs appearing every minute, the Cron Job might not be running.
-3. Run this SQL to check active cron jobs:
+The logs are empty, which means the **Cron Job is not running**.
 
-   ```sql
-   select * from cron.job;
-   ```
+1. Copy the code from `CHECK_CRON_STATUS.sql`.
+2. Run it in the **Supabase SQL Editor**.
+3. **Analyze the Results**:
+   - **Result 1 (pg_extension)**: Should show a row for `pg_cron`. If empty, enable the extension: `create extension pg_cron;`
+   - **Result 2 (cron.job)**: Should show a row with `jobname: invoke-push-scheduler`. If empty, the job wasn't scheduled. Run `SCHEDULE_CRON.sql` again.
+   - **Result 3 (job_run_details)**: Look for `status`. Is it `succeeded` or `failed`?
+
+## 4. Manually Test the Function
+
+If the Cron Job seems broken, test the function directly to see if it works.
+
+1. Go to **Supabase Dashboard** > **Edge Functions** > `push-scheduler`.
+2. Click the **Test** button (top right).
+3. Leave the default JSON body and click **Run**.
+4. Check the **Logs** tab again. Do you see new logs now?
+   - **Yes**: The function works, but the Cron Job is the issue.
+   - **No**: The function itself is broken (check for deployment errors).
 
 ## 4. Common Issues
 
