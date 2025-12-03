@@ -125,7 +125,8 @@ export class NotificationService {
             // Listen for notification actions
             PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
                 console.log('👉 Push notification tapped:', notification)
-                // Handle navigation if needed
+                // Navigation is handled by the OS bringing app to foreground
+                // We just need to handle the data in setupNotificationListeners
             })
 
         } catch (error) {
@@ -134,9 +135,9 @@ export class NotificationService {
     }
 
     setupNotificationListeners(onNotificationReceived: (habitId: string, habitData: any) => void): void {
-        // Listen for notification actions (when user taps notification)
+        // Listen for local notification actions (when user taps notification)
         LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
-            console.log('📱 Notification tapped:', notification)
+            console.log('📱 Local Notification tapped:', notification)
             const { habitId, habitName, habitEmoji, habitColor } = notification.notification.extra || {}
 
             if (habitId) {
@@ -147,6 +148,23 @@ export class NotificationService {
                 })
             }
         })
+
+        // Listen for Push Notification actions
+        if (typeof window !== 'undefined' && (window as any).Capacitor) {
+            PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+                console.log('👉 Push Notification tapped:', notification)
+                const data = notification.notification.data
+
+                // Data comes from the FCM payload 'data' field
+                if (data && data.habitId) {
+                    onNotificationReceived(data.habitId, {
+                        name: data.habitName,
+                        emoji: data.habitEmoji,
+                        color: data.habitColor,
+                    })
+                }
+            })
+        }
 
         console.log('✅ Notification listeners registered')
     }
