@@ -304,6 +304,6 @@ setTimeout(() => handleDismiss(), 30000) // 30 seconds (30000ms)
 
 ---
 
-**Built with ❤️ using Capacitor Local Notifications**
+### Built with ❤️ using Capacitor Local Notifications
 
 Your notifications are now fully functional! 🎉

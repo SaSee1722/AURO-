@@ -85,7 +85,7 @@ When you open the app:
 
 Open Android Studio > Logcat and look for:
 
-```
+```text
 ✅ Notification permissions granted
 ✅ Notification channel created
 📅 Scheduling notification for Test Notification:
@@ -127,14 +127,14 @@ Open Android Studio > Logcat and look for:
 
 #### Check 1: Permissions
 
-```
+```text
 Settings > Apps > AURO+ > Notifications > Allow
 Settings > Apps > AURO+ > Alarms & reminders > Allow
 ```
 
 #### Check 2: Battery Optimization
 
-```
+```text
 Settings > Apps > AURO+ > Battery > Unrestricted
 ```
 
@@ -147,7 +147,7 @@ Settings > Apps > AURO+ > Battery > Unrestricted
 
 Look for errors in Android Studio Logcat:
 
-```
+```text
 Filter: package:com.auro.habittracker
 ```
 
@@ -181,7 +181,7 @@ In Logcat, check the `scheduledFor` time:
 
 #### Check 2: Notification Channel Settings
 
-```
+```text
 Settings > Apps > AURO+ > Notifications > Habit Reminders
 - Ensure "Sound" is enabled
 - Ensure "Vibration" is enabled
@@ -205,7 +205,7 @@ Settings > Apps > AURO+ > Notifications > Habit Reminders
 
 Look for:
 
-```
+```text
 📱 Notification tapped: ...
 ```
 

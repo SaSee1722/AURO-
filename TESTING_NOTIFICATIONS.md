@@ -84,50 +84,50 @@ Follow these steps to test the notification system right now:
 
 ### No Notification?
 
-**Check 1: Permissions**
+#### Check 1: Permissions
 
-```
+```text
 Settings > Apps > AURO+ > Notifications > Allow
 Settings > Apps > AURO+ > Alarms & reminders > Allow
 ```
 
-**Check 2: Time is Correct**
+#### Check 2: Time is Correct
 
 - Make sure you set the time to FUTURE (2 minutes from now)
 - Check device time is correct
 
-**Check 3: Day is Selected**
+#### Check 3: Day is Selected
 
 - Make sure today's day is checked in repeat days
 
-**Check 4: Notifications Enabled**
+#### Check 4: Notifications Enabled
 
 - Profile tab > Notifications toggle is ON
 
 ### No Sound?
 
-**Check 1: Volume**
+#### Check 1: Volume
 
 - Turn up notification volume on device
 
-**Check 2: Do Not Disturb**
+#### Check 2: Do Not Disturb
 
 - Disable DND or add AURO+ to exceptions
 
-**Check 3: Notification Channel**
+#### Check 3: Notification Channel
 
-```
+```text
 Settings > Apps > AURO+ > Notifications > Habit Reminders > Sound > Enabled
 ```
 
 ### Splash Not Showing?
 
-**Check 1: Tap the Notification**
+#### Check 1: Tap the Notification
 
 - Don't just swipe it away
 - Actually tap on it
 
-**Check 2: App is Running**
+#### Check 2: App is Running
 
 - For web/PWA, app needs to be running
 - For mobile app, it should work even when closed
@@ -191,4 +191,4 @@ If something doesn't work:
 
 ---
 
-**Happy Testing! 🎉**
+### Happy Testing! 🎉

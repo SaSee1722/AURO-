@@ -120,11 +120,10 @@ export class NotificationService {
 
         const [hours, minutes] = habit.reminderTime.split(':').map(Number)
         const notifications = []
+        const WEEKS_TO_SCHEDULE = 4 // Schedule 4 weeks ahead to ensure reliability
 
         // Schedule for each repeat day
         for (const dayOfWeek of habit.repeatDays) {
-            const notificationId = this.generateNotificationId(habit.id, dayOfWeek)
-
             // Calculate next occurrence
             const now = new Date()
             const scheduledDate = new Date()
@@ -143,45 +142,55 @@ export class NotificationService {
                 daysUntilNext = 7
             }
 
-            scheduledDate.setDate(now.getDate() + daysUntilNext)
+            // Base date for the first occurrence
+            const firstOccurrenceDate = new Date(now)
+            firstOccurrenceDate.setDate(now.getDate() + daysUntilNext)
+            firstOccurrenceDate.setHours(hours, minutes, 0, 0)
 
-            console.log(`📅 Scheduling notification for ${habit.name}:`, {
-                day: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayOfWeek],
-                time: habit.reminderTime,
-                scheduledFor: scheduledDate.toLocaleString(),
-                daysUntilNext,
-                notificationId
-            })
+            // Schedule for the next WEEKS_TO_SCHEDULE occurrences
+            for (let week = 0; week < WEEKS_TO_SCHEDULE; week++) {
+                const notificationDate = new Date(firstOccurrenceDate)
+                notificationDate.setDate(firstOccurrenceDate.getDate() + (week * 7))
 
-            notifications.push({
-                id: notificationId,
-                title: `${habit.emoji} ${habit.name}`,
-                body: `Time to build your habit! Tap to get started.`,
-                schedule: {
-                    at: scheduledDate,
-                    allowWhileIdle: true,
-                    every: 'week' as any, // Native weekly repetition
-                },
-                sound: 'default',
-                attachments: undefined,
-                actionTypeId: 'HABIT_REMINDER',
-                extra: {
-                    habitId: habit.id,
-                    habitName: habit.name,
-                    habitEmoji: habit.emoji,
-                    habitColor: habit.color,
-                },
-                channelId: 'habit-reminders',
-            })
+                const notificationId = this.generateNotificationId(habit.id, dayOfWeek, week)
+
+                console.log(`📅 Scheduling notification for ${habit.name}:`, {
+                    day: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayOfWeek],
+                    weekOffset: week,
+                    time: habit.reminderTime,
+                    scheduledFor: notificationDate.toLocaleString(),
+                    notificationId
+                })
+
+                notifications.push({
+                    id: notificationId,
+                    title: `${habit.emoji} ${habit.name}`,
+                    body: `Time to build your habit! Tap to get started.`,
+                    schedule: {
+                        at: notificationDate,
+                        allowWhileIdle: true,
+                        // Removed 'every: week' to avoid reliability issues
+                    },
+                    sound: 'default',
+                    attachments: undefined,
+                    actionTypeId: 'HABIT_REMINDER',
+                    extra: {
+                        habitId: habit.id,
+                        habitName: habit.name,
+                        habitEmoji: habit.emoji,
+                        habitColor: habit.color,
+                    },
+                    channelId: 'habit-reminders',
+                })
+            }
         }
 
         return notifications
     }
 
-    private generateNotificationId(habitId: string, dayOfWeek: number): number {
-        // Create a unique ID by combining habit ID and day of week
-        // We use a string combination to ensure uniqueness before hashing
-        const uniqueString = `${habitId}_${dayOfWeek}`
+    private generateNotificationId(habitId: string, dayOfWeek: number, weekOffset: number = 0): number {
+        // Create a unique ID by combining habit ID, day of week, and week offset
+        const uniqueString = `${habitId}_${dayOfWeek}_${weekOffset}`
 
         const hashCode = (str: string) => {
             let hash = 0
@@ -208,10 +217,13 @@ export class NotificationService {
 
     async cancelHabitNotifications(habitId: string): Promise<void> {
         try {
-            // Cancel all notifications for this habit (all 7 days)
-            const idsToCancel = Array.from({ length: 7 }, (_, i) => ({
-                id: this.generateNotificationId(habitId, i)
-            }))
+            // Cancel all notifications for this habit (all 7 days * 4 weeks)
+            const idsToCancel = []
+            for (let day = 0; day < 7; day++) {
+                for (let week = 0; week < 4; week++) {
+                    idsToCancel.push({ id: this.generateNotificationId(habitId, day, week) })
+                }
+            }
 
             await LocalNotifications.cancel({ notifications: idsToCancel })
             console.log(`🗑️ Cancelled notifications for habit ${habitId}`)

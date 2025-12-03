@@ -162,7 +162,7 @@ notificationService.setupNotificationListeners((habitId, habitData) => {
 
 ### Technical Flow
 
-```
+```text
 Habit Created
     ↓
 notificationService.scheduleHabitNotifications()
@@ -233,7 +233,7 @@ Opens DoItNowScreen for habit completion
 
 ## 🔧 Build & Deploy
 
-### Android
+### Android Build
 
 ```bash
 # Build the web app
@@ -248,7 +248,7 @@ npx cap open android
 # Build and run on device
 ```
 
-### iOS
+### iOS Build
 
 ```bash
 # Build the web app
