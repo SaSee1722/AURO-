@@ -57,14 +57,17 @@ serve(async (req) => {
         // 2. Get Access Token
         const accessToken = await getAccessToken(serviceAccount)
 
-        // 3. Get current time (HH:MM)
-        const now = new Date()
-        const hours = String(now.getHours()).padStart(2, '0')
-        const minutes = String(now.getMinutes()).padStart(2, '0')
-        const currentTime = `${hours}:${minutes}`
-        const currentDay = now.getDay() // 0 = Sunday
+        // 3. Get current time (IST - UTC+5:30)
+        // The server runs on UTC. We need to adjust to IST to match user's local time setting.
+        const utcNow = new Date()
+        const istNow = new Date(utcNow.getTime() + (5.5 * 60 * 60 * 1000))
 
-        console.log(`⏰ Checking habits for time: ${currentTime}, Day: ${currentDay}`)
+        const hours = String(istNow.getUTCHours()).padStart(2, '0')
+        const minutes = String(istNow.getUTCMinutes()).padStart(2, '0')
+        const currentTime = `${hours}:${minutes}`
+        const currentDay = istNow.getUTCDay() // 0 = Sunday
+
+        console.log(`⏰ Checking habits for time: ${currentTime} (IST), Day: ${currentDay}`)
 
         // 4. Find habits due now
         const { data: habits, error: habitsError } = await supabase
