@@ -1,0 +1,3 @@
+module.exports=[45568,(a,b,c)=>{let{createClientModuleProxy:d}=a.r(54596);a.n(d("[project]/Downloads/habit-tracker-design/node_modules/next/dist/client/components/builtin/global-error.js <module evaluation>"))},89850,(a,b,c)=>{let{createClientModuleProxy:d}=a.r(54596);a.n(d("[project]/Downloads/habit-tracker-design/node_modules/next/dist/client/components/builtin/global-error.js"))},94414,a=>{"use strict";a.i(45568);var b=a.i(89850);a.n(b)}];
+
+//# sourceMappingURL=80a67_next_dist_client_components_builtin_global-error_62847b4b.js.map

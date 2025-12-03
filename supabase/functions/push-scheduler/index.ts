@@ -69,7 +69,7 @@ serve(async (req) => {
         // 4. Find habits due now
         const { data: habits, error: habitsError } = await supabase
             .from('habits')
-            .select('*, user_devices(token)')
+            .select('*')
             .eq('reminder_time', currentTime)
             .contains('repeat_days', [currentDay])
             .eq('archived', false)
@@ -82,9 +82,15 @@ serve(async (req) => {
 
         // 5. Send notifications via FCM v1 API
         for (const habit of habits) {
-            if (!habit.user_devices || habit.user_devices.length === 0) continue
+            // Fetch user's devices
+            const { data: devices, error: devicesError } = await supabase
+                .from('user_devices')
+                .select('token')
+                .eq('user_id', habit.user_id)
 
-            const tokens = habit.user_devices.map((d: any) => d.token)
+            if (devicesError || !devices || devices.length === 0) continue
+
+            const tokens = devices.map((d: any) => d.token)
 
             for (const token of tokens) {
                 const response = await fetch(
