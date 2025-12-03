@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronRight, Bell, Sparkles } from "lucide-react"
+import { ChevronRight, Bell, Sparkles, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { AddHabitModal } from "./add-habit-modal"
@@ -16,7 +16,7 @@ interface OnboardingProps {
 
 export function Onboarding({ onComplete }: OnboardingProps) {
   const [step, setStep] = useState(0)
-  const [selectedPresets, setSelectedPresets] = useState<number[]>([])
+  const [selectedPresets, setSelectedPresets] = useState<{ index: number; time: string }[]>([])
   const [showCustomModal, setShowCustomModal] = useState(false)
 
   const handleNext = () => {
@@ -24,14 +24,14 @@ export function Onboarding({ onComplete }: OnboardingProps) {
       setStep(step + 1)
     } else {
       // Add selected habits
-      selectedPresets.forEach((index) => {
-        const preset = defaultHabits[index]
+      selectedPresets.forEach((presetData) => {
+        const preset = defaultHabits[presetData.index]
         const newHabit: Habit = {
           id: crypto.randomUUID(),
           name: preset.name,
           emoji: preset.emoji,
           color: preset.color,
-          reminderTime: "09:00",
+          reminderTime: presetData.time,
           repeatDays: [0, 1, 2, 3, 4, 5, 6],
           createdAt: new Date().toISOString(),
           archived: false,
@@ -44,11 +44,15 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   }
 
   const togglePreset = (index: number) => {
-    if (selectedPresets.includes(index)) {
-      setSelectedPresets(selectedPresets.filter((i) => i !== index))
+    if (selectedPresets.some(p => p.index === index)) {
+      setSelectedPresets(selectedPresets.filter((p) => p.index !== index))
     } else {
-      setSelectedPresets([...selectedPresets, index])
+      setSelectedPresets([...selectedPresets, { index, time: "09:00" }])
     }
+  }
+
+  const updatePresetTime = (index: number, time: string) => {
+    setSelectedPresets(selectedPresets.map(p => p.index === index ? { ...p, time } : p))
   }
 
   const handleAddCustom = (habitData: {
@@ -123,19 +127,39 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             <p className="text-muted-foreground max-w-sm mb-6">Choose from popular habits or create your own</p>
 
             <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
-              {defaultHabits.map((habit, index) => (
-                <button
-                  key={index}
-                  onClick={() => togglePreset(index)}
-                  className={cn(
-                    "glass rounded-xl p-4 text-left transition-all",
-                    selectedPresets.includes(index) ? "ring-2 ring-primary bg-primary/10" : "hover:bg-secondary/80",
-                  )}
-                >
-                  <span className="text-2xl">{habit.emoji}</span>
-                  <p className="text-sm font-medium text-foreground mt-2">{habit.name}</p>
-                </button>
-              ))}
+              {defaultHabits.map((habit, index) => {
+                const isSelected = selectedPresets.some(p => p.index === index)
+                const selectedTime = selectedPresets.find(p => p.index === index)?.time || "09:00"
+
+                return (
+                  <button
+                    key={index}
+                    onClick={() => togglePreset(index)}
+                    className={cn(
+                      "glass rounded-xl p-4 text-left transition-all relative overflow-hidden",
+                      isSelected ? "ring-2 ring-primary bg-primary/10" : "hover:bg-secondary/80",
+                    )}
+                  >
+                    <span className="text-2xl">{habit.emoji}</span>
+                    <p className="text-sm font-medium text-foreground mt-2">{habit.name}</p>
+
+                    {isSelected && (
+                      <div
+                        className="mt-3 flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-2 py-1 border border-primary/20 animate-in fade-in slide-in-from-bottom-2"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <Clock className="h-3 w-3 text-primary" />
+                        <input
+                          type="time"
+                          value={selectedTime}
+                          onChange={(e) => updatePresetTime(index, e.target.value)}
+                          className="bg-transparent text-xs font-medium w-full focus:outline-none"
+                        />
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
             </div>
 
             <Button variant="ghost" onClick={() => setShowCustomModal(true)} className="mt-4 text-primary">

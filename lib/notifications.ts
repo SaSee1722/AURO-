@@ -229,7 +229,6 @@ export class NotificationService {
                 },
                 sound: 'default',
                 attachments: undefined,
-                actionTypeId: 'HABIT_REMINDER',
                 extra: {
                     habitId: habit.id,
                     habitName: habit.name,
@@ -295,7 +294,6 @@ export class NotificationService {
                     },
                     sound: 'default',
                     attachments: undefined,
-                    actionTypeId: 'HABIT_REMINDER',
                     extra: {
                         habitId: habit.id,
                         habitName: habit.name,
