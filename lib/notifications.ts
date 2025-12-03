@@ -120,6 +120,49 @@ export class NotificationService {
 
         const [hours, minutes] = habit.reminderTime.split(':').map(Number)
         const notifications = []
+
+        // Check if it's a daily habit (all 7 days selected)
+        const isDaily = habit.repeatDays.length === 7
+
+        if (isDaily) {
+            // For daily habits, we can use the native 'every: day' which is generally reliable
+            const now = new Date()
+            const scheduledDate = new Date()
+            scheduledDate.setHours(hours, minutes, 0, 0)
+
+            if (now >= scheduledDate) {
+                scheduledDate.setDate(scheduledDate.getDate() + 1)
+            }
+
+            const notificationId = this.generateNotificationId(habit.id, 999) // Special ID for daily
+
+            console.log(`📅 Scheduling DAILY notification for ${habit.name} at ${habit.reminderTime}`)
+
+            notifications.push({
+                id: notificationId,
+                title: `${habit.emoji} ${habit.name}`,
+                body: `Time to build your habit! Tap to get started.`,
+                schedule: {
+                    at: scheduledDate,
+                    allowWhileIdle: true,
+                    every: 'day' as any,
+                    count: 100 // Optional: limit count if needed, but 'every' handles it
+                },
+                sound: 'default',
+                attachments: undefined,
+                actionTypeId: 'HABIT_REMINDER',
+                extra: {
+                    habitId: habit.id,
+                    habitName: habit.name,
+                    habitEmoji: habit.emoji,
+                    habitColor: habit.color,
+                },
+                channelId: 'habit-reminders',
+            })
+
+            return notifications
+        }
+
         const WEEKS_TO_SCHEDULE = 4 // Schedule 4 weeks ahead to ensure reliability
 
         // Schedule for each repeat day
