@@ -119,7 +119,11 @@ serve(async (req) => {
                                     priority: "high",
                                     notification: {
                                         sound: "default",
-                                        click_action: "FCM_PLUGIN_ACTIVITY"
+                                        click_action: "FCM_PLUGIN_ACTIVITY",
+                                        channel_id: "habit-reminders", // Match the channel created in app
+                                        visibility: "public",
+                                        default_sound: true,
+                                        default_vibrate_timings: true
                                     }
                                 }
                             }
