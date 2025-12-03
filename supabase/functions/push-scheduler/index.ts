@@ -1,14 +1,39 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { JWT } from 'https://deno.land/x/jose@v4.15.5/index.ts'
 
-// 🔑 YOU MUST SET THESE ENV VARS IN SUPABASE DASHBOARD
-// FCM_SERVER_KEY: Your Firebase Cloud Messaging Server Key
-// SUPABASE_URL: Auto-set by Supabase
-// SUPABASE_SERVICE_ROLE_KEY: Auto-set by Supabase
+// 🔑 YOU MUST SET THIS ENV VAR IN SUPABASE DASHBOARD
+// FIREBASE_SERVICE_ACCOUNT: The entire JSON content of your service account key
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+// Helper to get access token from Service Account
+async function getAccessToken(serviceAccount: any) {
+    const now = Math.floor(Date.now() / 1000)
+    const claim = {
+        iss: serviceAccount.client_email,
+        scope: 'https://www.googleapis.com/auth/firebase.messaging',
+        aud: 'https://oauth2.googleapis.com/token',
+        exp: now + 3600,
+        iat: now,
+    }
+
+    const key = await import('https://deno.land/x/jose@v4.15.5/index.ts').then(m => m.importPKCS8(serviceAccount.private_key, 'RS256'))
+    const jwt = await new import('https://deno.land/x/jose@v4.15.5/index.ts').then(m => new m.SignJWT(claim).setProtectedHeader({ alg: 'RS256' }).sign(key))
+
+    const params = new URLSearchParams()
+    params.append('grant_type', 'urn:ietf:params:oauth:grant-type:jwt-bearer')
+    params.append('assertion', jwt)
+
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        body: params,
+    })
+    const data = await res.json()
+    return data.access_token
 }
 
 serve(async (req) => {
@@ -22,7 +47,17 @@ serve(async (req) => {
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         )
 
-        // 1. Get current time (HH:MM)
+        // 1. Get Service Account
+        const serviceAccountStr = Deno.env.get('FIREBASE_SERVICE_ACCOUNT')
+        if (!serviceAccountStr) {
+            throw new Error('Missing FIREBASE_SERVICE_ACCOUNT env var')
+        }
+        const serviceAccount = JSON.parse(serviceAccountStr)
+
+        // 2. Get Access Token
+        const accessToken = await getAccessToken(serviceAccount)
+
+        // 3. Get current time (HH:MM)
         const now = new Date()
         const hours = String(now.getHours()).padStart(2, '0')
         const minutes = String(now.getMinutes()).padStart(2, '0')
@@ -31,11 +66,7 @@ serve(async (req) => {
 
         console.log(`⏰ Checking habits for time: ${currentTime}, Day: ${currentDay}`)
 
-        // 2. Find habits due now
-        // Note: This is a simplified query. In production, you might want to handle timezones properly.
-        // For now, we assume server time matches user time or users set time in UTC.
-        // A better approach is to store 'reminder_time_utc' in the database.
-
+        // 4. Find habits due now
         const { data: habits, error: habitsError } = await supabase
             .from('habits')
             .select('*, user_devices(token)')
@@ -49,37 +80,47 @@ serve(async (req) => {
 
         const results = []
 
-        // 3. Send notifications
+        // 5. Send notifications via FCM v1 API
         for (const habit of habits) {
             if (!habit.user_devices || habit.user_devices.length === 0) continue
 
             const tokens = habit.user_devices.map((d: any) => d.token)
 
-            // Send to FCM
-            const fcmResponse = await fetch('https://fcm.googleapis.com/fcm/send', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `key=${Deno.env.get('FCM_SERVER_KEY')}`
-                },
-                body: JSON.stringify({
-                    registration_ids: tokens,
-                    notification: {
-                        title: `${habit.emoji} ${habit.name}`,
-                        body: "Time to build your habit! Tap to get started.",
-                        sound: "default",
-                        click_action: "FCM_PLUGIN_ACTIVITY"
-                    },
-                    data: {
-                        habitId: habit.id,
-                        landing_page: "do-it-now"
-                    },
-                    priority: "high"
-                })
-            })
+            for (const token of tokens) {
+                const response = await fetch(
+                    `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${accessToken}`,
+                        },
+                        body: JSON.stringify({
+                            message: {
+                                token: token,
+                                notification: {
+                                    title: `${habit.emoji} ${habit.name}`,
+                                    body: "Time to build your habit! Tap to get started.",
+                                },
+                                data: {
+                                    habitId: habit.id,
+                                    landing_page: "do-it-now"
+                                },
+                                android: {
+                                    priority: "high",
+                                    notification: {
+                                        sound: "default",
+                                        click_action: "FCM_PLUGIN_ACTIVITY"
+                                    }
+                                }
+                            }
+                        }),
+                    }
+                )
 
-            const fcmResult = await fcmResponse.json()
-            results.push({ habit: habit.name, result: fcmResult })
+                const result = await response.json()
+                results.push({ habit: habit.name, token: token.substring(0, 10) + '...', result })
+            }
         }
 
         return new Response(JSON.stringify(results), {
@@ -87,6 +128,7 @@ serve(async (req) => {
         })
 
     } catch (error) {
+        console.error('Error:', error)
         return new Response(JSON.stringify({ error: error.message }), {
             status: 400,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
