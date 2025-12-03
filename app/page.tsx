@@ -7,6 +7,7 @@ import { CalendarTab } from "@/components/tabs/calendar-tab"
 import { VybesTab } from "@/components/tabs/vybes-tab"
 import { ProfileTab } from "@/components/tabs/profile-tab"
 import { Onboarding } from "@/components/onboarding"
+import { OnboardingFlow } from "@/components/onboarding-flow"
 import { DoItNowScreen } from "@/components/do-it-now-screen"
 import { SplashScreen } from "@/components/splash-screen"
 import { LoginScreen } from "@/components/login-screen"
@@ -26,6 +27,7 @@ export default function VybeApp() {
   const [authChecked, setAuthChecked] = useState(false)
 
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [showProfileSetup, setShowProfileSetup] = useState(false)
   const [activeTab, setActiveTab] = useState<TabType>("home")
   const [doItNowHabit, setDoItNowHabit] = useState<Habit | null>(null)
   const [notificationHabit, setNotificationHabit] = useState<{ habit: Habit; quote: string } | null>(null)
@@ -89,6 +91,9 @@ export default function VybeApp() {
       setSession(session)
       if (session?.user) {
         notificationService.registerPushNotifications(session.user.id)
+
+        // Check if profile is complete
+        checkProfileCompletion(session.user.id)
       }
       if (!authChecked) {
         setAuthChecked(true)
@@ -115,11 +120,30 @@ export default function VybeApp() {
     return () => subscription.unsubscribe()
   }, [])
 
+  const checkProfileCompletion = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('age')
+      .eq('id', userId)
+      .single()
+
+    if (error || !data || !data.age) {
+      setShowProfileSetup(true)
+    } else {
+      setShowProfileSetup(false)
+    }
+  }
+
   useEffect(() => {
     if (authChecked && !showSplash && session) {
       // Check onboarding status only after auth is confirmed and splash is done
       const onboardingComplete = isOnboardingComplete()
       setShowOnboarding(!onboardingComplete)
+
+      // Also check profile
+      if (session.user) {
+        checkProfileCompletion(session.user.id)
+      }
     }
   }, [authChecked, showSplash, session])
 
@@ -149,6 +173,10 @@ export default function VybeApp() {
 
   if (!session) {
     return <LoginScreen />
+  }
+
+  if (showProfileSetup) {
+    return <OnboardingFlow onComplete={() => setShowProfileSetup(false)} />
   }
 
   if (showOnboarding) {

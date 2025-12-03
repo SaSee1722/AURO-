@@ -1,4 +1,4 @@
-
+``
 import { Droplets, Move, Brain, Target, Heart, Zap, Moon, Coffee, Smartphone, Smile, Sun, Wind, BookOpen, Clock, Phone, List, Leaf, Shield, Star, Award, Briefcase, Users, Music, Camera, PenTool, Anchor, Compass, Map, Globe, Key, Lock, Unlock, Eye, Ear, Speaker, Mic, Radio, Tv, Monitor, Laptop, Tablet, Watch, Battery, Plug, Lightbulb, Flame } from "lucide-react"
 
 export const articles = [

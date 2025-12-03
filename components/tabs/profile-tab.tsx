@@ -51,6 +51,7 @@ export function ProfileTab() {
 
   // Temp state for editing
   const [editAge, setEditAge] = useState(24)
+  const [editName, setEditName] = useState("")
 
   useEffect(() => {
     // Load notification preference
@@ -71,13 +72,18 @@ export function ProfileTab() {
 
       const { data, error } = await supabase
         .from('profiles')
-        .select('age')
+        .select('age, full_name')
         .eq('id', user.id)
         .single()
 
       if (data) {
-        setProfileData(prev => ({ ...prev, age: data.age || 24 }))
+        setProfileData(prev => ({
+          ...prev,
+          age: data.age || 24,
+          name: data.full_name || user?.user_metadata?.full_name || "User"
+        }))
         setEditAge(data.age || 24)
+        setEditName(data.full_name || user?.user_metadata?.full_name || "User")
       }
     }
 
@@ -204,12 +210,13 @@ export function ProfileTab() {
         .upsert({
           id: user.id,
           age: editAge,
+          full_name: editName,
           updated_at: new Date().toISOString(),
         })
 
       if (error) throw error
 
-      setProfileData(prev => ({ ...prev, age: editAge }))
+      setProfileData(prev => ({ ...prev, age: editAge, name: editName }))
       setShowEditProfileModal(false)
       showToastMessage("Profile updated successfully!")
     } catch (error) {
@@ -282,6 +289,7 @@ export function ProfileTab() {
                 className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={() => {
                   setEditAge(profileData.age)
+                  setEditName(profileData.name)
                   setShowEditProfileModal(true)
                 }}
               >
@@ -466,6 +474,16 @@ export function ProfileTab() {
                   type="number"
                   value={editAge}
                   onChange={(e) => setEditAge(parseInt(e.target.value) || 0)}
+                  className="w-full p-3 rounded-lg bg-accent/20 border-0 focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Name</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
                   className="w-full p-3 rounded-lg bg-accent/20 border-0 focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
