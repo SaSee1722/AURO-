@@ -1,0 +1,29 @@
+{
+    "project_info": {
+        "project_number": "249743564348",
+        "project_id": "auro-ac746",
+        "storage_bucket": "auro-ac746.firebasestorage.app"
+    },
+    "client": [
+        {
+            "client_info": {
+                "mobilesdk_app_id": "1:249743564348:android:9f3a0f8a274646e6d66d39",
+                "android_client_info": {
+                    "package_name": "com.auro.habittracker"
+                }
+            },
+            "oauth_client": [],
+            "api_key": [
+                {
+                    "current_key": "AIzaSyDlfpQNCwRgW9cacwn2dBAhzsINP4CF5Sk"
+                }
+            ],
+            "services": {
+                "appinvite_service": {
+                    "other_platform_oauth_client": []
+                }
+            }
+        }
+    ],
+    "configuration_version": "1"
+}
