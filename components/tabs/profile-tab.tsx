@@ -7,19 +7,17 @@ import {
   Bell,
   Settings,
   Globe,
-  Share2,
-  Star,
-  MessageSquare,
   X,
   Check,
   User,
   Mail,
-  Lock,
   Calendar,
   Trophy,
   Medal,
   Award,
-  Zap
+  Zap,
+  Edit2,
+  Save
 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -27,44 +25,34 @@ import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import { useTranslation } from "@/lib/use-translation"
 import { useAuth } from "@/components/auth-provider"
+import { useTheme } from "@/components/theme-provider"
+import { supabase } from "@/lib/supabase"
 
 import { getHabits, getCompletions, getStreak } from "@/lib/store"
 
 export function ProfileTab() {
   const { t } = useTranslation()
   const { user, signOut } = useAuth()
-  const [isDark, setIsDark] = useState(false)
+  const { theme, setTheme } = useTheme()
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showLanguageModal, setShowLanguageModal] = useState(false)
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false)
   const [selectedLanguage, setSelectedLanguage] = useState("English")
-  const [feedbackText, setFeedbackText] = useState("")
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState("")
   const [achievements, setAchievements] = useState<any[]>([])
 
-  // Mock user data (replace with real data from DB later)
-  const userProfile = {
-    name: user?.user_metadata?.full_name || "Alex Johnson",
-    age: 24,
-    email: user?.email || "alex.johnson@example.com",
-  }
+  const [profileData, setProfileData] = useState({
+    name: user?.user_metadata?.full_name || "User",
+    age: 24, // Default, will fetch from DB
+    email: user?.email || "",
+  })
+
+  // Temp state for editing
+  const [editAge, setEditAge] = useState(24)
 
   useEffect(() => {
-    // Load and apply dark mode preference
-    const darkModePref = localStorage.getItem("darkMode")
-    if (darkModePref === "true") {
-      document.documentElement.classList.add("dark")
-      setIsDark(true)
-    } else if (darkModePref === "false") {
-      document.documentElement.classList.remove("dark")
-      setIsDark(false)
-    } else {
-      // Default: check system preference
-      setIsDark(document.documentElement.classList.contains("dark"))
-    }
-
     // Load notification preference
     const notifPref = localStorage.getItem("notifications")
     if (notifPref !== null) {
@@ -76,6 +64,24 @@ export function ProfileTab() {
     if (langPref) {
       setSelectedLanguage(langPref)
     }
+
+    // Fetch Profile Data
+    const fetchProfile = async () => {
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('age')
+        .eq('id', user.id)
+        .single()
+
+      if (data) {
+        setProfileData(prev => ({ ...prev, age: data.age || 24 }))
+        setEditAge(data.age || 24)
+      }
+    }
+
+    fetchProfile()
 
     // Calculate Achievements
     const calculateAchievements = () => {
@@ -91,8 +97,6 @@ export function ProfileTab() {
       })
 
       // Calculate perfect days (all active habits completed)
-      // This is a bit complex, let's simplify for now:
-      // Count days with >= 3 completions as a "good day"
       const completionsByDate: Record<string, number> = {}
       completions.forEach(c => {
         completionsByDate[c.date] = (completionsByDate[c.date] || 0) + 1
@@ -107,7 +111,7 @@ export function ProfileTab() {
           color: "text-orange-500",
           bg: "bg-orange-500/10",
           desc: "Completed 5 morning habits",
-          unlocked: totalCompletions >= 5 // Simplified logic
+          unlocked: totalCompletions >= 5
         },
         {
           id: 2,
@@ -147,25 +151,12 @@ export function ProfileTab() {
     window.addEventListener('vybe_data_updated', handleUpdate)
     return () => window.removeEventListener('vybe_data_updated', handleUpdate)
 
-  }, [])
+  }, [user])
 
   const showToastMessage = (message: string) => {
     setToastMessage(message)
     setShowToast(true)
     setTimeout(() => setShowToast(false), 3000)
-  }
-
-  const toggleDarkMode = () => {
-    const newDarkMode = !isDark
-
-    if (newDarkMode) {
-      document.documentElement.classList.add("dark")
-    } else {
-      document.documentElement.classList.remove("dark")
-    }
-
-    setIsDark(newDarkMode)
-    localStorage.setItem("darkMode", newDarkMode.toString())
   }
 
   const toggleNotifications = async () => {
@@ -179,7 +170,6 @@ export function ProfileTab() {
         const { notificationService } = await import('@/lib/notifications')
         console.log('🔔 Requesting permissions...')
         const granted = await notificationService.initialize()
-        console.log('Permission granted:', granted)
 
         if (granted) {
           setNotificationsEnabled(true)
@@ -188,20 +178,15 @@ export function ProfileTab() {
           // Schedule notifications for all habits
           const { getHabits } = await import('@/lib/store')
           const habits = getHabits()
-          console.log(`📅 Scheduling notifications for ${habits.length} habits...`)
           await notificationService.scheduleHabitNotifications(habits)
-
-          // List pending notifications for debugging
-          await notificationService.listPendingNotifications()
 
           showToastMessage(t("notificationsEnabled") || "Notifications enabled!")
         } else {
-          console.warn('❌ Permission denied')
           showToastMessage("Please allow notifications in your device settings")
         }
       } catch (error) {
         console.error('❌ Error enabling notifications:', error)
-        showToastMessage("Error enabling notifications. Check console for details.")
+        showToastMessage("Error enabling notifications")
       }
     } else {
       setNotificationsEnabled(false)
@@ -210,66 +195,26 @@ export function ProfileTab() {
     }
   }
 
-  const handleGeneralSettings = () => {
-    setShowSettingsModal(true)
-  }
-
-  const handleLanguageOptions = () => {
-    setShowLanguageModal(true)
-  }
-
-  const handleShareWithFriends = async () => {
-    const shareData = {
-      title: "Vybe - Habit Tracker",
-      text: "Build unbreakable habits with Vybe! Track your progress and stay motivated.",
-      url: window.location.href
-    }
+  const handleSaveProfile = async () => {
+    if (!user) return
 
     try {
-      if (navigator.share) {
-        await navigator.share(shareData)
-        showToastMessage(t("thanksForSharing"))
-      } else {
-        await navigator.clipboard.writeText(shareData.url)
-        showToastMessage(t("linkCopied"))
-      }
-    } catch (err) {
-      console.log("Share failed:", err)
-    }
-  }
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          age: editAge,
+          updated_at: new Date().toISOString(),
+        })
 
-  const handleRateUs = () => {
-    const userAgent = navigator.userAgent.toLowerCase()
-    let storeUrl = ""
+      if (error) throw error
 
-    if (userAgent.includes("android")) {
-      storeUrl = "https://play.google.com/store"
-      showToastMessage(t("openingPlayStore"))
-    } else if (userAgent.includes("iphone") || userAgent.includes("ipad")) {
-      storeUrl = "https://apps.apple.com"
-      showToastMessage(t("openingAppStore"))
-    } else {
-      showToastMessage(t("thankYouSupport"))
-      return
-    }
-
-    if (storeUrl) {
-      window.open(storeUrl, "_blank")
-    }
-  }
-
-  const handleFeedback = () => {
-    setShowFeedbackModal(true)
-  }
-
-  const submitFeedback = () => {
-    if (feedbackText.trim()) {
-      console.log("Feedback submitted:", feedbackText)
-      showToastMessage(t("thanksForFeedback"))
-      setFeedbackText("")
-      setShowFeedbackModal(false)
-    } else {
-      showToastMessage(t("enterFeedback"))
+      setProfileData(prev => ({ ...prev, age: editAge }))
+      setShowEditProfileModal(false)
+      showToastMessage("Profile updated successfully!")
+    } catch (error) {
+      console.error("Error updating profile:", error)
+      showToastMessage("Failed to update profile")
     }
   }
 
@@ -306,10 +251,10 @@ export function ProfileTab() {
         <div className="relative z-10">
           <div className="flex items-center gap-4 mb-6">
             <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center text-2xl font-bold text-primary border-2 border-primary/30">
-              {userProfile.name.charAt(0)}
+              {profileData.name.charAt(0)}
             </div>
             <div>
-              <h2 className="text-xl font-bold text-foreground">{userProfile.name}</h2>
+              <h2 className="text-xl font-bold text-foreground">{profileData.name}</h2>
               <p className="text-sm text-muted-foreground">Level 5 Achiever</p>
             </div>
           </div>
@@ -319,28 +264,30 @@ export function ProfileTab() {
               <Mail className="h-5 w-5 text-muted-foreground" />
               <div className="flex-1">
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Email</p>
-                <p className="text-sm font-medium truncate">{userProfile.email}</p>
+                <p className="text-sm font-medium truncate">{profileData.email}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-background/50 backdrop-blur-sm">
-              <Calendar className="h-5 w-5 text-muted-foreground" />
-              <div className="flex-1">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Age</p>
-                <p className="text-sm font-medium">{userProfile.age} years</p>
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-background/50 backdrop-blur-sm justify-between group">
+              <div className="flex items-center gap-3">
+                <Calendar className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Age</p>
+                  <p className="text-sm font-medium">{profileData.age} years</p>
+                </div>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => {
+                  setEditAge(profileData.age)
+                  setShowEditProfileModal(true)
+                }}
+              >
+                <Edit2 className="h-4 w-4" />
+              </Button>
             </div>
-
-            <button
-              onClick={() => showToastMessage("Password reset email sent!")}
-              className="w-full flex items-center gap-3 p-3 rounded-xl bg-background/50 backdrop-blur-sm hover:bg-background/80 transition-colors text-left"
-            >
-              <Lock className="h-5 w-5 text-muted-foreground" />
-              <div className="flex-1">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Security</p>
-                <p className="text-sm font-medium text-primary">Change Password</p>
-              </div>
-            </button>
           </div>
         </div>
       </Card>
@@ -365,12 +312,6 @@ export function ProfileTab() {
               </div>
               <h3 className="font-bold text-sm mb-1">{achievement.title}</h3>
               <p className="text-xs text-muted-foreground leading-tight">{achievement.desc}</p>
-
-              {!achievement.unlocked && (
-                <div className="absolute top-2 right-2">
-                  <Lock className="h-4 w-4 text-muted-foreground/50" />
-                </div>
-              )}
             </Card>
           ))}
         </div>
@@ -381,7 +322,7 @@ export function ProfileTab() {
         <div className="space-y-1">
           {/* General settings */}
           <button
-            onClick={handleGeneralSettings}
+            onClick={() => setShowSettingsModal(true)}
             className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-accent/50 transition-colors"
           >
             <div className="h-9 w-9 rounded-lg bg-orange-500/20 flex items-center justify-center">
@@ -392,7 +333,7 @@ export function ProfileTab() {
 
           {/* Language Options */}
           <button
-            onClick={handleLanguageOptions}
+            onClick={() => setShowLanguageModal(true)}
             className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-accent/50 transition-colors"
           >
             <div className="flex items-center gap-3">
@@ -402,44 +343,6 @@ export function ProfileTab() {
               <span className="font-medium text-foreground">{t("languageOptions")}</span>
             </div>
             <span className="text-sm text-muted-foreground">{selectedLanguage}</span>
-          </button>
-        </div>
-      </Card>
-
-      {/* Social & Feedback Options */}
-      <Card className="glass border-0 p-2 shadow-lg stagger-item">
-        <div className="space-y-1">
-          {/* Share with friends */}
-          <button
-            onClick={handleShareWithFriends}
-            className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-accent/50 transition-colors"
-          >
-            <div className="h-9 w-9 rounded-lg bg-blue-500/20 flex items-center justify-center">
-              <Share2 className="h-5 w-5 text-blue-500" />
-            </div>
-            <span className="font-medium text-foreground">{t("shareWithFriends")}</span>
-          </button>
-
-          {/* Rate us */}
-          <button
-            onClick={handleRateUs}
-            className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-accent/50 transition-colors"
-          >
-            <div className="h-9 w-9 rounded-lg bg-teal-500/20 flex items-center justify-center">
-              <Star className="h-5 w-5 text-teal-500" />
-            </div>
-            <span className="font-medium text-foreground">{t("rateUs")}</span>
-          </button>
-
-          {/* Feedback */}
-          <button
-            onClick={handleFeedback}
-            className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-accent/50 transition-colors"
-          >
-            <div className="h-9 w-9 rounded-lg bg-sky-500/20 flex items-center justify-center">
-              <MessageSquare className="h-5 w-5 text-sky-500" />
-            </div>
-            <span className="font-medium text-foreground">{t("feedback")}</span>
           </button>
         </div>
       </Card>
@@ -457,7 +360,7 @@ export function ProfileTab() {
 
       {/* Version Info */}
       <div className="mt-2 text-center">
-        <p className="text-sm text-muted-foreground font-medium">{t("version")} 1.3.9</p>
+        <p className="text-sm text-muted-foreground font-medium">{t("version")} 1.4.0</p>
       </div>
 
       {/* Settings Modal */}
@@ -478,10 +381,13 @@ export function ProfileTab() {
               {/* Dark Mode */}
               <div className="flex items-center justify-between p-3 rounded-lg bg-accent/20">
                 <div className="flex items-center gap-3">
-                  {isDark ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+                  {theme === 'dark' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
                   <span className="font-medium">{t("darkMode")}</span>
                 </div>
-                <Switch checked={isDark} onCheckedChange={toggleDarkMode} />
+                <Switch
+                  checked={theme === 'dark'}
+                  onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+                />
               </div>
 
               {/* Notifications */}
@@ -539,40 +445,46 @@ export function ProfileTab() {
         </div>
       )}
 
-      {/* Feedback Modal */}
-      {showFeedbackModal && (
+      {/* Edit Profile Modal */}
+      {showEditProfileModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
           <Card className="glass border-0 p-6 w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-foreground">{t("sendFeedback")}</h2>
+              <h2 className="text-xl font-bold text-foreground">Edit Profile</h2>
               <button
-                onClick={() => setShowFeedbackModal(false)}
+                onClick={() => setShowEditProfileModal(false)}
                 className="h-8 w-8 rounded-full hover:bg-accent/50 flex items-center justify-center transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <textarea
-              value={feedbackText}
-              onChange={(e) => setFeedbackText(e.target.value)}
-              placeholder={t("feedbackPlaceholder")}
-              className="w-full h-32 p-3 rounded-lg bg-accent/20 border-0 resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-            />
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Age</label>
+                <input
+                  type="number"
+                  value={editAge}
+                  onChange={(e) => setEditAge(parseInt(e.target.value) || 0)}
+                  className="w-full p-3 rounded-lg bg-accent/20 border-0 focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            </div>
 
             <div className="flex gap-3 mt-6">
               <Button
-                onClick={() => setShowFeedbackModal(false)}
+                onClick={() => setShowEditProfileModal(false)}
                 variant="outline"
                 className="flex-1"
               >
-                {t("cancel")}
+                Cancel
               </Button>
               <Button
-                onClick={submitFeedback}
+                onClick={handleSaveProfile}
                 className="flex-1 bg-primary hover:bg-primary/90"
               >
-                {t("submit")}
+                <Save className="mr-2 h-4 w-4" />
+                Save
               </Button>
             </div>
           </Card>
