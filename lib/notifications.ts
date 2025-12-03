@@ -179,7 +179,10 @@ export class NotificationService {
     }
 
     private generateNotificationId(habitId: string, dayOfWeek: number): number {
-        // Create a unique ID by combining habit ID hash and day of week
+        // Create a unique ID by combining habit ID and day of week
+        // We use a string combination to ensure uniqueness before hashing
+        const uniqueString = `${habitId}_${dayOfWeek}`
+
         const hashCode = (str: string) => {
             let hash = 0
             for (let i = 0; i < str.length; i++) {
@@ -190,7 +193,7 @@ export class NotificationService {
             return Math.abs(hash)
         }
 
-        return hashCode(habitId) + dayOfWeek
+        return hashCode(uniqueString)
     }
 
     private async getAllScheduledIds(): Promise<{ id: number }[]> {
