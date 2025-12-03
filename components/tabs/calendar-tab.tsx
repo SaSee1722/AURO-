@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { ChevronLeft, ChevronRight, Share2, Trophy, Target, Calendar as CalendarIcon } from "lucide-react"
+import { ChevronLeft, ChevronRight, Share2, Trophy, Target, Calendar as CalendarIcon, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { getHabits, getCompletions, getCompletionsForDate } from "@/lib/store"
@@ -126,13 +126,22 @@ export function CalendarTab() {
           <Card className="glass border-0 p-4 shadow-lg">
             {/* Month Nav */}
             <div className="flex items-center justify-between mb-4 px-2">
-              <div className="grid grid-cols-7 gap-1 w-full text-center">
-                {dayNames.map((day) => (
-                  <div key={day} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                    {day}
-                  </div>
-                ))}
-              </div>
+              <Button variant="ghost" size="icon" onClick={prevMonth} className="h-8 w-8">
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+              <h2 className="text-lg font-bold text-foreground capitalize">{monthName}</h2>
+              <Button variant="ghost" size="icon" onClick={nextMonth} className="h-8 w-8">
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+            </div>
+
+            {/* Day Names */}
+            <div className="grid grid-cols-7 gap-1 w-full text-center mb-2">
+              {dayNames.map((day) => (
+                <div key={day} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  {day}
+                </div>
+              ))}
             </div>
 
             {/* Days Grid */}
@@ -144,130 +153,91 @@ export function CalendarTab() {
                 const day = i + 1
                 const dateStr = formatDate(new Date(year, month, day))
                 const isSelected = dateStr === selectedDate
+                const isToday = dateStr === formatDate(new Date())
+
+                // Check if any habits were completed on this day
+                const hasCompletions = completions.some(c => c.date === dateStr)
 
                 return (
                   <button
                     key={day}
                     onClick={() => setSelectedDate(dateStr)}
                     className={cn(
-                      "aspect-square flex items-center justify-center rounded-full text-sm font-bold transition-all",
+                      "aspect-square flex flex-col items-center justify-center rounded-xl text-sm font-bold transition-all relative",
                       isSelected
-                        ? "bg-primary text-primary-foreground shadow-lg"
-                        : "text-foreground hover:bg-secondary"
+                        ? "bg-primary text-primary-foreground shadow-lg scale-110 z-10"
+                        : "text-foreground hover:bg-secondary",
+                      isToday && !isSelected && "border-2 border-primary/50"
                     )}
                   >
-                    {day}
+                    <span>{day}</span>
+                    {hasCompletions && !isSelected && (
+                      <div className="w-1 h-1 rounded-full bg-primary mt-1" />
+                    )}
                   </button>
                 )
               })}
             </div>
           </Card>
 
-          {/* Statistics Section */}
+          {/* Selected Date Habits */}
           <div>
-            <h2 className="text-lg font-bold text-foreground mb-1 uppercase tracking-wide">{t("statistics")}</h2>
-            <p className="text-sm font-bold text-muted-foreground mb-4 capitalize">{monthName}</p>
+            <h2 className="text-lg font-bold text-foreground mb-3 uppercase tracking-wide">
+              {selectedDate === formatDate(new Date()) ? t("today") : new Date(selectedDate!).toLocaleDateString(currentLocale, { weekday: 'long', month: 'long', day: 'numeric' })}
+            </h2>
 
-            <Card className="glass border-0 p-5 shadow-lg">
+            <div className="space-y-3">
               {(() => {
-                // Calculate weekly stats based on selectedDate
-                // Fix: Parse YYYY-MM-DD string explicitly to avoid timezone issues
-                const [y, m, d] = (selectedDate || formatDate(new Date())).split('-').map(Number)
-                const selected = new Date(y, m - 1, d)
+                if (!selectedDate) return null
 
-                const dayOfWeek = selected.getDay() // 0 (Sun) to 6 (Sat)
-                const startOfWeek = new Date(selected)
-                startOfWeek.setDate(selected.getDate() - dayOfWeek) // Go back to Sunday
+                // Fix timezone issue by parsing YYYY-MM-DD manually
+                const [y, m, d] = selectedDate.split('-').map(Number)
+                const dateObj = new Date(y, m - 1, d)
+                const dayOfWeek = dateObj.getDay()
 
-                const weekData = []
-                let totalRate = 0
+                const scheduledHabits = activeHabits.filter(h => h.repeatDays.includes(dayOfWeek))
 
-                for (let i = 0; i < 7; i++) {
-                  const current = new Date(startOfWeek)
-                  current.setDate(startOfWeek.getDate() + i)
-                  const dateStr = formatDate(current)
-                  const currentDayOfWeek = current.getDay()
-
-                  // Find habits scheduled for this day
-                  const scheduledHabits = activeHabits.filter(h => h.repeatDays.includes(currentDayOfWeek))
-
-                  // Find completions for this day matching scheduled habits
-                  const completedCount = completions.filter(c =>
-                    c.date === dateStr && scheduledHabits.some(h => h.id === c.habitId)
-                  ).length
-
-                  const rate = scheduledHabits.length > 0 ? (completedCount / scheduledHabits.length) * 100 : 0
-                  weekData.push({
-                    day: current.toLocaleDateString(currentLocale, { weekday: "narrow" }),
-                    rate,
-                    isHigh: rate >= 80, // Green if >= 80%
-                    isMedium: rate >= 40 && rate < 80, // Orange if 40-79%
-                    date: current
-                  })
-                  totalRate += rate
+                if (scheduledHabits.length === 0) {
+                  return (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>No habits scheduled for this day.</p>
+                    </div>
+                  )
                 }
 
-                const avgRate = Math.round(totalRate / 7)
-                const endOfWeek = new Date(startOfWeek)
-                endOfWeek.setDate(startOfWeek.getDate() + 6)
+                return scheduledHabits.map(habit => {
+                  const isCompleted = completions.some(c => c.habitId === habit.id && c.date === selectedDate)
 
-                const dateRange = `${startOfWeek.toLocaleDateString(currentLocale, { month: "short", day: "numeric" })} - ${endOfWeek.toLocaleDateString(currentLocale, { month: "short", day: "numeric" })}`
-
-                return (
-                  <>
-                    <div className="flex justify-between items-start mb-8">
-                      <div>
-                        <h3 className="text-lg font-bold text-foreground">{dateRange}</h3>
-                        <p className="text-sm text-muted-foreground">{startOfWeek.getFullYear()}</p>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-2xl font-bold text-foreground">{avgRate}%</span>
-                        <p className="text-xs text-muted-foreground">{t("avgCompletionRate")}</p>
-                      </div>
-                    </div>
-
-                    {/* Bar Chart */}
-                    <div className="h-32 flex items-end justify-between gap-2 relative">
-                      {/* Dotted Line (50%) */}
-                      <div className="absolute top-1/2 left-0 right-0 border-t border-dashed border-muted-foreground/20" />
-
-                      {weekData.map((data, i) => (
-                        <div key={i} className="flex flex-col items-center gap-2 flex-1 group relative">
-                          {/* Tooltip */}
-                          <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-opacity bg-foreground text-background text-[10px] px-2 py-1 rounded z-10">
-                            {Math.round(data.rate)}%
-                          </div>
-
-                          {/* Bar Container */}
-                          <div className="relative w-full h-full flex items-end justify-center">
-                            {/* Background bar (always visible) */}
-                            <div className="absolute bottom-0 w-4 h-full bg-secondary/30 rounded-full" />
-
-                            {/* Actual completion bar */}
-                            <div
-                              className={cn(
-                                "w-4 rounded-full transition-all duration-500 relative z-10",
-                                data.rate >= 80 ? "bg-green-500 shadow-lg shadow-green-500/20" :
-                                  data.rate >= 40 ? "bg-orange-500 shadow-lg shadow-orange-500/20" :
-                                    data.rate > 0 ? "bg-red-400 shadow-lg shadow-red-400/20" : "bg-transparent"
-                              )}
-                              style={{ height: `${data.rate}%` }}
-                            />
-                          </div>
-
-                          <span className={cn(
-                            "text-xs font-medium",
-                            formatDate(data.date) === selectedDate ? "text-primary font-bold" : "text-muted-foreground"
-                          )}>
-                            {data.day}
-                          </span>
+                  return (
+                    <Card key={habit.id} className={cn(
+                      "border-0 p-4 shadow-md flex items-center justify-between transition-all",
+                      isCompleted ? "bg-primary/10" : "bg-card/50"
+                    )}>
+                      <div className="flex items-center gap-4">
+                        <div className={cn(
+                          "h-12 w-12 rounded-xl flex items-center justify-center text-2xl shadow-sm transition-all",
+                          isCompleted ? "bg-primary text-primary-foreground scale-110" : "bg-secondary"
+                        )}>
+                          {isCompleted ? <Check className="h-6 w-6" /> : habit.emoji}
                         </div>
-                      ))}
-                    </div>
-                  </>
-                )
+                        <div>
+                          <h3 className={cn("font-bold text-lg", isCompleted && "text-primary")}>{habit.name}</h3>
+                          <p className="text-xs text-muted-foreground">
+                            {habit.reminderTime ? `Reminder: ${habit.reminderTime}` : "Anytime"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {isCompleted && (
+                        <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+                          <Trophy className="h-4 w-4 text-primary" />
+                        </div>
+                      )}
+                    </Card>
+                  )
+                })
               })()}
-            </Card>
+            </div>
           </div>
         </div>
       )}
