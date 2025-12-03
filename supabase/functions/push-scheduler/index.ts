@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { JWT } from 'https://deno.land/x/jose@v4.15.5/index.ts'
+import { importPKCS8, SignJWT } from 'https://deno.land/x/jose@v4.15.5/index.ts'
 
 // 🔑 YOU MUST SET THIS ENV VAR IN SUPABASE DASHBOARD
 // FIREBASE_SERVICE_ACCOUNT: The entire JSON content of your service account key
@@ -21,8 +21,8 @@ async function getAccessToken(serviceAccount: any) {
         iat: now,
     }
 
-    const key = await import('https://deno.land/x/jose@v4.15.5/index.ts').then(m => m.importPKCS8(serviceAccount.private_key, 'RS256'))
-    const jwt = await new import('https://deno.land/x/jose@v4.15.5/index.ts').then(m => new m.SignJWT(claim).setProtectedHeader({ alg: 'RS256' }).sign(key))
+    const key = await importPKCS8(serviceAccount.private_key, 'RS256')
+    const jwt = await new SignJWT(claim).setProtectedHeader({ alg: 'RS256' }).sign(key)
 
     const params = new URLSearchParams()
     params.append('grant_type', 'urn:ietf:params:oauth:grant-type:jwt-bearer')
