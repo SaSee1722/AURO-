@@ -149,6 +149,20 @@ export class NotificationService {
             }
         })
 
+        // Listen for local notification received (foreground)
+        LocalNotifications.addListener('localNotificationReceived', (notification) => {
+            console.log('📱 Local Notification received in foreground:', notification)
+            const { habitId, habitName, habitEmoji, habitColor } = notification.extra || {}
+
+            if (habitId) {
+                onNotificationReceived(habitId, {
+                    name: habitName,
+                    emoji: habitEmoji,
+                    color: habitColor,
+                })
+            }
+        })
+
         // Listen for Push Notification actions
         if (typeof window !== 'undefined' && (window as any).Capacitor) {
             PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
